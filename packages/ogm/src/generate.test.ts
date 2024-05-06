@@ -50,7 +50,7 @@ describe("generate", () => {
 
         expect(generated).toMatchInlineSnapshot(`
             "import type { SelectionSetNode, DocumentNode } from \\"graphql\\";
-            import type { RawGQL } from \\"@neo4j/graphql-ogm\\";
+            import type { RawGQL } from \\"@efebia/neo4j-graphql-ogm\\";
             export type RequiredResolvers = Required<Resolvers>;
             export type Primitive = string | number | boolean;
             export type Prettify<T> = {
@@ -1131,7 +1131,7 @@ describe("generate", () => {
 
         expect(generated).toMatchInlineSnapshot(`
             "import type { SelectionSetNode, DocumentNode } from \\"graphql\\";
-            import type { RawGQL } from \\"@neo4j/graphql-ogm\\";
+            import type { RawGQL } from \\"@efebia/neo4j-graphql-ogm\\";
             export type RequiredResolvers = Required<Resolvers>;
             export type Primitive = string | number | boolean;
             export type Prettify<T> = {
@@ -2298,7 +2298,7 @@ describe("generate", () => {
 
         expect(fileContent).toMatchInlineSnapshot(`
             "import type { SelectionSetNode, DocumentNode } from \\"graphql\\";
-            import type { RawGQL } from \\"@neo4j/graphql-ogm\\";
+            import type { RawGQL } from \\"@efebia/neo4j-graphql-ogm\\";
             export type RequiredResolvers = Required<Resolvers>;
             export type Primitive = string | number | boolean;
             export type Prettify<T> = {
@@ -3384,7 +3384,7 @@ describe("generate", () => {
 
         expect(generated).toMatchInlineSnapshot(`
             "import type { SelectionSetNode, DocumentNode } from \\"graphql\\";
-            import type { RawGQL } from \\"@neo4j/graphql-ogm\\";
+            import type { RawGQL } from \\"@efebia/neo4j-graphql-ogm\\";
             export type RequiredResolvers = Required<Resolvers>;
             export type Primitive = string | number | boolean;
             export type Prettify<T> = {
@@ -5288,7 +5288,7 @@ describe("generate", () => {
 
         expect(generated).toMatchInlineSnapshot(`
             "import type { SelectionSetNode, DocumentNode } from \\"graphql\\";
-            import type { RawGQL } from \\"@neo4j/graphql-ogm\\";
+            import type { RawGQL } from \\"@efebia/neo4j-graphql-ogm\\";
             export type RequiredResolvers = Required<Resolvers>;
             export type Primitive = string | number | boolean;
             export type Prettify<T> = {

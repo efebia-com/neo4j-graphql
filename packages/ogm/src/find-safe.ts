@@ -1,4 +1,4 @@
-const findSafeGenerated = `import type { RawGQL } from '@neo4j/graphql-ogm';
+const findSafeGenerated = `import type { RawGQL } from '@efebia/neo4j-graphql-ogm';
 export type RequiredResolvers = Required<Resolvers>;
 export type Primitive = string | number | boolean;
 export type Prettify<T> = {

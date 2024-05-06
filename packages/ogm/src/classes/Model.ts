@@ -26,7 +26,7 @@ import generateSelectionSet from "../utils/generate-selection-set";
 
 type Neo4jGraphQLOGMContext = Omit<Neo4jGraphQLContext, "jwt" | "token">;
 
-const logger = debuglog('@neo4j/graphql-ogm');
+const logger = debuglog('@efebia/neo4j-graphql-ogm');
 
 function printSelectionSet(selectionSet: string | DocumentNode | SelectionSetNode): string {
     if (typeof selectionSet === "string") {

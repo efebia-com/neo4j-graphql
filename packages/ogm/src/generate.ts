@@ -38,7 +38,7 @@ export interface IGenerateOptions {
   */
     noWrite?: boolean;
     /**
-      Instance of @neo4j/graphql-ogm
+      Instance of @efebia/neo4j-graphql-ogm
   */
     ogm: OGM;
     /**
