@@ -1,6 +1,6 @@
 {
-    "name": "@neo4j/graphql-ogm",
-    "version": "5.3.4",
+    "name": "@efebia/neo4j-graphql-ogm",
+    "version": "5.3.4-1.0.0",
     "description": "GraphQL powered OGM for Neo4j and Javascript applications",
     "keywords": [
         "neo4j",

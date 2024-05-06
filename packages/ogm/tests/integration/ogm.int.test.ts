@@ -229,6 +229,52 @@ describe("OGM", () => {
                 await session.close();
             }
         });
+
+        test("should find and populate relationship using custom object selectionSet", async () => {
+            const session = driver.session();
+
+            const typeDefs = /* GraphQL */ `
+                type ${typeGenre} {
+                    id: ID
+                }
+
+                type ${typeMovie} {
+                    id: ID
+                    ${typeGenre.plural}: [${typeGenre}!]! @relationship(type: "HAS_GENRE", direction: OUT)
+                }
+            `;
+
+            const selectionSet = {
+                id: true,
+                [typeGenre.plural]: {
+                    id: true,
+                },
+            }
+
+            const ogm = new OGM({ typeDefs, driver });
+
+            await ogm.init();
+
+            const id = generate({
+                charset: "alphabetic",
+            });
+
+            try {
+                await session.run(`
+                    CREATE (m:${typeMovie} {id: "${id}"})
+                    CREATE (g:${typeGenre} {id: "${id}"})
+                    MERGE (m)-[:HAS_GENRE]->(g)
+                `);
+
+                const Movie = ogm.model(typeMovie.name);
+
+                const movies = await Movie.findSafe({ where: { id }, selectionSet });
+
+                expect(movies).toEqual([{ id, [typeGenre.plural]: [{ id }] }]);
+            } finally {
+                await session.close();
+            }
+        });
     });
 
     describe("create", () => {
