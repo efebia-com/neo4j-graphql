@@ -1660,6 +1660,33 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@efebia/neo4j-graphql-ogm@workspace:packages/ogm":
+  version: 0.0.0-use.local
+  resolution: "@efebia/neo4j-graphql-ogm@workspace:packages/ogm"
+  dependencies:
+    "@graphql-codegen/core": "npm:^4.0.0"
+    "@graphql-codegen/plugin-helpers": "npm:^5.0.0"
+    "@graphql-codegen/typescript": "npm:^4.0.0"
+    "@graphql-codegen/typescript-resolvers": "npm:^4.0.6"
+    "@graphql-tools/merge": "npm:^9.0.0"
+    "@neo4j/graphql": "npm:^5.3.4"
+    "@types/jest": "npm:29.5.12"
+    "@types/node": "npm:20.12.8"
+    camelcase: "npm:6.3.0"
+    jest: "npm:29.7.0"
+    jsonwebtoken: "npm:9.0.2"
+    pluralize: "npm:8.0.0"
+    prettier: "npm:^2.7.1"
+    randomstring: "npm:1.3.0"
+    semver: "npm:7.6.0"
+    ts-jest: "npm:29.1.2"
+    typescript: "npm:5.1.6"
+  peerDependencies:
+    graphql: ^16.0.0
+    neo4j-driver: ^5.8.0
+  languageName: unknown
+  linkType: soft
+
 "@envelop/core@npm:^3.0.4":
   version: 3.0.6
   resolution: "@envelop/core@npm:3.0.6"
@@ -1882,7 +1909,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@graphql-codegen/typescript@npm:^4.0.0":
+"@graphql-codegen/typescript-resolvers@npm:^4.0.6":
+  version: 4.0.6
+  resolution: "@graphql-codegen/typescript-resolvers@npm:4.0.6"
+  dependencies:
+    "@graphql-codegen/plugin-helpers": "npm:^5.0.3"
+    "@graphql-codegen/typescript": "npm:^4.0.6"
+    "@graphql-codegen/visitor-plugin-common": "npm:5.1.0"
+    "@graphql-tools/utils": "npm:^10.0.0"
+    auto-bind: "npm:~4.0.0"
+    tslib: "npm:~2.6.0"
+  peerDependencies:
+    graphql: ^0.8.0 || ^0.9.0 || ^0.10.0 || ^0.11.0 || ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0
+  checksum: 10c0/d4f2452d2fbdbe31e04cb83bd7d0317fc27362384bfdbc1f2ed2092239811ff2369333051795b8fb3f22ffab20ec10d2b91b8faa1291774599c37112884cc650
+  languageName: node
+  linkType: hard
+
+"@graphql-codegen/typescript@npm:^4.0.0, @graphql-codegen/typescript@npm:^4.0.6":
   version: 4.0.6
   resolution: "@graphql-codegen/typescript@npm:4.0.6"
   dependencies:
@@ -2838,32 +2881,6 @@ __metadata:
     ws: "npm:8.17.0"
   peerDependencies:
     "@neo4j/graphql": ^5.0.0
-  languageName: unknown
-  linkType: soft
-
-"@neo4j/graphql-ogm@workspace:packages/ogm":
-  version: 0.0.0-use.local
-  resolution: "@neo4j/graphql-ogm@workspace:packages/ogm"
-  dependencies:
-    "@graphql-codegen/core": "npm:^4.0.0"
-    "@graphql-codegen/plugin-helpers": "npm:^5.0.0"
-    "@graphql-codegen/typescript": "npm:^4.0.0"
-    "@graphql-tools/merge": "npm:^9.0.0"
-    "@neo4j/graphql": "npm:^5.3.4"
-    "@types/jest": "npm:29.5.12"
-    "@types/node": "npm:20.12.8"
-    camelcase: "npm:6.3.0"
-    jest: "npm:29.7.0"
-    jsonwebtoken: "npm:9.0.2"
-    pluralize: "npm:8.0.0"
-    prettier: "npm:^2.7.1"
-    randomstring: "npm:1.3.0"
-    semver: "npm:7.6.0"
-    ts-jest: "npm:29.1.2"
-    typescript: "npm:5.1.6"
-  peerDependencies:
-    graphql: ^16.0.0
-    neo4j-driver: ^5.8.0
   languageName: unknown
   linkType: soft
 

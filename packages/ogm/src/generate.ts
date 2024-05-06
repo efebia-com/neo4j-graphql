@@ -20,6 +20,7 @@
 import { codegen } from "@graphql-codegen/core";
 import type { Types } from "@graphql-codegen/plugin-helpers";
 import * as typescriptPlugin from "@graphql-codegen/typescript";
+import * as typescriptResolversPlugin from "@graphql-codegen/typescript-resolvers";
 import * as fs from "fs";
 import * as graphql from "graphql";
 import prettier from "prettier";
@@ -45,7 +46,7 @@ export interface IGenerateOptions {
      * @param defaultConfig Default configuration
      * @returns The new configuration
      */
-    config?: (defaultConfig: Types.GenerateOptions) => Types.GenerateOptions
+    config?: (defaultConfig: Types.GenerateOptions) => Types.GenerateOptions;
 }
 
 /*  This function will generate TypeScript aggregate input types
@@ -143,24 +144,36 @@ async function generate({ config: configFn = (cf) => cf, ...options }: IGenerate
 
     const config: Types.GenerateOptions = {
         config: {},
-        plugins: [
-            {
-                typescript: {},
-            },
-        ],
         filename: options.outFile || "some-random-file-name-thats-not-used",
         documents: [],
         schemaAst: options.ogm.schema,
         schema: graphql.parse(graphql.printSchema(options.ogm.schema)),
+        plugins: [
+            {
+                typescript: {
+                    scalars: {
+                        DateTime: "string",
+                    },
+                },
+            },
+            {
+                "typescript-resolvers": {},
+            },
+        ],
         pluginMap: {
             typescript: typescriptPlugin,
+            "typescript-resolvers": typescriptResolversPlugin,
         },
     };
 
     const finalConfig = configFn(config);
     const output = await codegen(finalConfig);
 
-    const content: string[] = [`import type { SelectionSetNode, DocumentNode } from "graphql";`, findSafeGenerated, output];
+    const content: string[] = [
+        `import type { SelectionSetNode, DocumentNode } from "graphql";`,
+        findSafeGenerated,
+        output,
+    ];
 
     const aggregateSelections: any = {};
     const modeMap: Record<string, string> = {};
