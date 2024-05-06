@@ -62,6 +62,35 @@ async function main() {
 }
 ```
 
+### Find Safe
+Adds type safety to the `find` functionality, with an additional method `findSafe`.
+The only difference is that it takes an object with boolean values instead of a plain GraphQL string/DocumentNode.
+
+```js
+const { OGM } = require("@neo4j/graphql-ogm");
+const neo4j = require("neo4j-driver");
+
+const typeDefs = `
+    type Movie {
+        id: ID
+        name: String
+    }
+`;
+
+const driver = neo4j.driver("bolt://localhost:7687", neo4j.auth.basic("admin", "password"));
+
+const ogm = new OGM({ typeDefs, driver });
+
+async function main() {
+    await ogm.init();
+
+    const Movie = ogm.model("Movie");
+
+    const [theMatrix] = await Movie.findSafe({ where: { name: "The Matrix" }, selectionSet: { name: true } });
+    //`theMatrix` will have the shape `{ name: Maybe<String> | undefined }`
+}
+```
+
 ## Licence
 
 [Apache 2.0](https://github.com/neo4j/graphql/blob/dev/packages/ogm/LICENSE.txt)
