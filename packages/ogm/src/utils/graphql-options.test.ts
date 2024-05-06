@@ -32,22 +32,22 @@ describe("graphql options", () => {
         expect(result).toBe(`"ASC"`);
     });
     test("Build a simple where query", () => {
-        const result = buildGQLOptions({ where: { _id_GT: 1 } })
+        const result = buildGQLOptions({ where: { _id_GT: 1 } }, true)
 
         expect(result).toBe("{where:{_id_GT:1}}");
     });
     test("Build a more complex filter", () => {
-        const result = buildGQLOptions({ where: { _id_GT: 1, query: "TEST" }, sortBy: { title: new RawGQL('ASC') } })
+        const result = buildGQLOptions({ where: { _id_GT: 1, query: "TEST" }, sortBy: { title: new RawGQL('ASC') } }, true)
 
         expect(result).toBe(`{where:{_id_GT:1,query:"TEST"},sortBy:{title:ASC}}`);
     });
     test("Object arrays", () => {
-        const result = buildGQLOptions({ sortBy: [{ title: new RawGQL('ASC') }] })
+        const result = buildGQLOptions({ sortBy: [{ title: new RawGQL('ASC') }] }, true)
 
         expect(result).toBe(`{sortBy:[{title:ASC}]}`);
     });
     test("Primitive arrays", () => {
-        const result = buildGQLOptions({ where: { category_IN: ['CAT1','CAT2','CAT3'] } })
+        const result = buildGQLOptions({ where: { category_IN: ['CAT1','CAT2','CAT3'] } }, true)
 
         expect(result).toBe(`{where:{category_IN:["CAT1","CAT2","CAT3"]}}`);
     });
