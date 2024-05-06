@@ -50,6 +50,434 @@ describe("generate", () => {
 
         expect(generated).toMatchInlineSnapshot(`
             "import type { SelectionSetNode, DocumentNode } from \\"graphql\\";
+            import type { RawGQL } from \\"@neo4j/graphql-ogm\\";
+            export type RequiredResolvers = Required<Resolvers>;
+            export type Primitive = string | number | boolean;
+            export type Prettify<T> = {
+              [K in keyof T]: T[K];
+            } & {};
+            export type AddRawGQL<T> = NonNullable<T> extends (infer TItem)[]
+              ? (TItem | RawGQL)[]
+              : NonNullable<T> extends Primitive
+              ? T
+              : IsAny<NonNullable<T>> extends true
+              ? T
+              : {
+                  [key in keyof T]: AddRawGQL<T[key]> | RawGQL;
+                };
+
+            export type AddRawGQLToOptions<TProps> = TProps extends { where?: infer TWhere }
+              ? {
+                  where?: AddRawGQL<NonNullable<TWhere>>;
+                } & AddRawGQLToOptions<Omit<TProps, \\"where\\">>
+              : TProps extends { sort?: infer TSort }
+              ? {
+                  sort?: NonNullable<TSort> extends (infer TItem)[]
+                    ? AddRawGQL<NonNullable<TItem>>[]
+                    : never;
+                }
+              : {};
+
+            export type ResolverArgs<
+              TModel extends object,
+              TKey extends keyof TModel,
+              TResolvers extends { [key: PropertyKey]: Resolver<any, any, any, any> }
+            > = TModel[TKey] extends Primitive
+              ? never
+              : NonNullable<TResolvers[TKey]> extends Resolver<any, any, any, infer Props>
+              ? \\"directed\\" extends keyof Props
+                ? Omit<Props, \\"directed\\" | \\"where\\" | \\"sort\\"> & {
+                    directed?: boolean;
+                  } & AddRawGQLToOptions<Props>
+                : {}
+              : {};
+
+            export type UnionToIntersection<U> = (
+              U extends any ? (k: U) => void : never
+            ) extends (k: infer I) => void
+              ? I
+              : never;
+            type LastOf<T> = UnionToIntersection<
+              T extends any ? () => T : never
+            > extends () => infer R
+              ? R
+              : never;
+
+            type Push<T extends any[], V> = [...T, V];
+
+            export type TuplifyUnion<
+              T,
+              L = LastOf<T>,
+              N = [T] extends [never] ? true : false
+            > = true extends N ? [] : Push<TuplifyUnion<Exclude<T, L>>, L>;
+
+            // This is pure magic
+            export type MagicArray<TArray extends any[]> =
+              NonNullable<TArray> extends (infer TItem)[] ? TItem[] : never;
+            export type MagicObject<TElement> =
+              NonNullable<TElement> extends (infer TItem)[]
+                ? TItem[]
+                : NonNullable<TElement> extends Primitive
+                ? TElement
+                : {
+                    [key in keyof TElement as TElement[key] extends never
+                      ? never
+                      : key]: MagicObject<TElement[key]>;
+                  };
+
+            export type StripNeverKeys<TElement> = TElement extends object
+              ? {
+                  [key in keyof TElement as [TElement[key]] extends [never]
+                    ? never
+                    : TElement[key] extends never[]
+                    ? never
+                    : key]: TElement[key];
+                }
+              : TElement;
+
+            export type ClearObjectWithNeverKeys<
+              TElement,
+              TStripped = StripNeverKeys<TElement>
+            > = [keyof Omit<TElement, keyof TStripped>] extends [never] ? TStripped : never;
+
+            export type StripNeverKeysAddTypename<
+              TElement,
+              TKey,
+              TStripped = ClearObjectWithNeverKeys<TElement>
+            > = [keyof TStripped] extends [never]
+              ? never
+              : TStripped & { __typename: TKey };
+
+            type RetrieveType<TItem> = Exclude<
+              TItem,
+              Promise<any>
+            > extends ResolverTypeWrapper<infer TValue>
+              ? TValue extends { __typename?: infer TName }
+                ? TItem extends object
+                  ? TName extends keyof Resolvers
+                    ? \\"__isTypeOf\\" extends keyof RequiredResolvers[TName]
+                      ? Omit<RequiredResolvers[TName], \\"__isTypeOf\\"> extends {
+                          [key: string]: Resolver<any, any, any, any>;
+                        }
+                        ? {
+                            Model: Exclude<TItem, Promise<any>>;
+                            Resolvers: Omit<RequiredResolvers[TName], \\"__isTypeOf\\">;
+                          }
+                        : never
+                      : never
+                    : never
+                  : never
+                : never
+              : never;
+
+            export type ResolverReturnType<
+              TModel extends object,
+              TKey extends keyof TModel,
+              TResolvers extends { [key: PropertyKey]: Resolver<any, any, any, any> }
+            > = TModel[TKey] extends Primitive
+              ? never
+              : NonNullable<TResolvers[TKey]> extends Resolver<infer Props, any, any, any>
+              ? Props extends (infer TItem)[]
+                ? RetrieveType<Exclude<TItem, Promise<any>>>
+                : RetrieveType<Exclude<Props, Promise<any>>>
+              : never;
+
+            export type ResolverObject = {
+              [key: PropertyKey]: Resolver<any, any, any> | Resolver<any, any, any, any>;
+            };
+
+            export type ResolveKey<
+              TModel extends object,
+              TResolvers extends ResolverObject,
+              TItem,
+              TKey,
+              TOmittedElement = TKey extends keyof TItem
+                ? Omit<
+                    NonNullable<TItem[TKey]>,
+                    \\"where\\" | \\"directed\\" | \\"options\\" | \\"after\\" | \\"first\\" | \\"sort\\"
+                  >
+                : never
+            > = TKey extends keyof TModel
+              ? NonNullable<TModel[TKey]> extends Primitive
+                ? TModel[TKey]
+                : ResolverReturnType<TModel, TKey, TResolvers> extends {
+                    Model: infer NestedTModel;
+                    Resolvers: infer NestedResolvers;
+                  }
+                ? NestedTModel extends object
+                  ? NestedResolvers extends ResolverObject
+                    ? TKey extends keyof TItem
+                      ? \\"on\\" extends keyof TOmittedElement
+                        ?
+                            | ({
+                                -readonly [key in keyof TOmittedElement[\\"on\\"]]: StripNeverKeysAddTypename<
+                                  {
+                                    -readonly [K in keyof TOmittedElement[\\"on\\"][key]]: K extends keyof NestedTModel
+                                      ? NestedTModel[K] extends any[]
+                                        ? MagicArray<
+                                            ResolveKey<
+                                              NestedTModel,
+                                              NestedResolvers,
+                                              TOmittedElement[\\"on\\"][key],
+                                              K
+                                            >[]
+                                          >
+                                        : ResolveKey<
+                                            NestedTModel,
+                                            NestedResolvers,
+                                            TOmittedElement[\\"on\\"][key],
+                                            K
+                                          >
+                                      : never;
+                                  },
+                                  key
+                                >;
+                              }[keyof TOmittedElement[\\"on\\"]] &
+                                ResolveKey<
+                                  TModel,
+                                  TResolvers,
+                                  Omit<TItem, TKey> & {
+                                    [key in TKey]: Omit<TOmittedElement, \\"on\\">;
+                                  },
+                                  TKey
+                                >)
+                            | (undefined extends TModel[TKey]
+                                ? NonNullable<TModel[TKey]> extends any[]
+                                  ? never
+                                  : undefined
+                                : never)
+                            | (undefined extends TItem[TKey]
+                                ? NonNullable<TModel[TKey]> extends any[]
+                                  ? never
+                                  : undefined
+                                : never)
+                        : ClearObjectWithNeverKeys<
+                            | {
+                                -readonly [key in keyof TOmittedElement as key extends keyof NestedTModel
+                                  ? key
+                                  : never]: key extends keyof NestedTModel
+                                  ? NestedTModel[key] extends any[]
+                                    ? MagicArray<
+                                        ResolveKey<
+                                          NestedTModel,
+                                          NestedResolvers,
+                                          TOmittedElement,
+                                          key
+                                        >[]
+                                      >
+                                    : ResolveKey<
+                                        NestedTModel,
+                                        NestedResolvers,
+                                        TOmittedElement,
+                                        key
+                                      >
+                                  : never;
+                              }
+                            | (undefined extends TModel[TKey]
+                                ? NonNullable<TModel[TKey]> extends any[]
+                                  ? never
+                                  : undefined
+                                : never)
+                            | (undefined extends TItem[TKey]
+                                ? NonNullable<TModel[TKey]> extends any[]
+                                  ? never
+                                  : undefined
+                                : never)
+                          >
+                      : never
+                    : never
+                  : TModel[TKey] extends (infer TArrayItem)[]
+                  ? NonNullable<TArrayItem> extends Primitive
+                    ? TArrayItem
+                    : never
+                  : never
+                : never
+              : never;
+
+            //Only if TValue = any, this is true
+            export type IsAny<TValue> = unknown extends TValue ? true : false;
+
+            export type NestedBooleanObject<
+              TModel extends object,
+              TResolvers extends ResolverObject,
+              TKey extends keyof TModel,
+              TElement,
+              RequiredValue extends NonNullable<TElement> = NonNullable<TElement>
+            > = IsAny<RequiredValue> extends true
+              ? boolean
+              : RequiredValue extends object
+              ? RequiredValue extends (infer TItem)[]
+                ? NonNullable<TItem> extends Primitive
+                  ? boolean
+                  : {
+                      [key in keyof TItem]?: ResolverReturnType<
+                        TModel,
+                        TKey,
+                        TResolvers
+                      > extends {
+                        Model: infer NestedModel;
+                        Resolvers: infer NestedResolvers;
+                      }
+                        ? NestedModel extends object
+                          ? NestedResolvers extends ResolverObject
+                            ? key extends keyof NestedModel
+                              ? NonNullable<TItem[key]> extends object
+                                ? NonNullable<TItem[key]> extends any[]
+                                  ? NestedBooleanObject<
+                                      NestedModel,
+                                      NestedResolvers,
+                                      key,
+                                      NonNullable<NonNullable<TItem>[key]>
+                                    >
+                                  : IsAny<NonNullable<TItem[key]>> extends true
+                                  ? boolean
+                                  : \\"__typename\\" extends keyof NonNullable<TItem[key]>
+                                  ? NestedBooleanObject<
+                                      NestedModel,
+                                      NestedResolvers,
+                                      key,
+                                      UnionToIntersection<
+                                        Omit<
+                                          NonNullable<NonNullable<TItem>[key]>,
+                                          \\"__typename\\"
+                                        >
+                                      > & {
+                                        __typename: NonNullable<
+                                          NonNullable<TItem[key]>[\\"__typename\\"]
+                                        >;
+                                      }
+                                    >
+                                  : never
+                                : boolean
+                              : never
+                            : never
+                          : never
+                        : never;
+                    } & ResolverArgs<TModel, TKey, TResolvers> &
+                      BooleanOn<TElement>
+                : {
+                    [key in keyof RequiredValue]?: ResolverReturnType<
+                      TModel,
+                      TKey,
+                      TResolvers
+                    > extends { Model: infer NestedModel; Resolvers: infer NestedResolvers }
+                      ? NestedModel extends object
+                        ? NestedResolvers extends ResolverObject
+                          ? key extends keyof NestedModel
+                            ? NonNullable<RequiredValue[key]> extends any[]
+                              ? NestedBooleanObject<
+                                  NestedModel,
+                                  NestedResolvers,
+                                  key,
+                                  NonNullable<RequiredValue[key]>
+                                >
+                              : NonNullable<RequiredValue[key]> extends object
+                              ? IsAny<NonNullable<RequiredValue[key]>> extends true
+                                ? boolean
+                                : \\"__typename\\" extends keyof NonNullable<RequiredValue[key]>
+                                ? NestedBooleanObject<
+                                    NestedModel,
+                                    NestedResolvers,
+                                    key,
+                                    UnionToIntersection<
+                                      Omit<NonNullable<RequiredValue[key]>, \\"__typename\\">
+                                    > & {
+                                      __typename: NonNullable<
+                                        NonNullable<RequiredValue[key]>[\\"__typename\\"]
+                                      >;
+                                    }
+                                  >
+                                : never
+                              : boolean
+                            : never
+                          : never
+                        : never
+                      : never;
+                  } & BooleanOn<TElement> &
+                    ResolverArgs<TModel, TKey, TResolvers>
+              : boolean;
+
+            export type SelectionSetObject<
+              TModel extends object,
+              TResolvers extends ResolverObject
+            > = {
+              [key in keyof TModel]?: NonNullable<TModel[key]> extends Primitive
+                ? boolean
+                : NonNullable<TModel[key]> extends (infer TItem)[]
+                ? \\"__typename\\" extends keyof TItem
+                  ? NestedBooleanObject<
+                      TModel,
+                      TResolvers,
+                      key,
+                      Prettify<
+                        UnionToIntersection<Omit<NonNullable<TItem>, \\"__typename\\">> & {
+                          __typename: NonNullable<NonNullable<TItem>[\\"__typename\\"]>;
+                        }
+                      >
+                    >
+                  : NonNullable<TItem> extends Primitive
+                  ? boolean
+                  : never
+                : \\"__typename\\" extends keyof NonNullable<TModel[key]>
+                ? NestedBooleanObject<
+                    TModel,
+                    TResolvers,
+                    key,
+                    Prettify<
+                      UnionToIntersection<Omit<NonNullable<TModel[key]>, \\"__typename\\">> & {
+                        __typename: NonNullable<NonNullable<TModel[key]>[\\"__typename\\"]>;
+                      }
+                    >
+                  >
+                : never;
+            };
+
+            type BooleanOn<TElement> = TElement extends { __typename: infer Typename }
+              ? TuplifyUnion<NonNullable<Typename>>[\\"length\\"] extends 1
+                ? {}
+                : NonNullable<Typename> extends string
+                ? {
+                    on?: {
+                      [key in NonNullable<Typename>]?: key extends keyof RequiredResolvers
+                        ? key extends keyof ResolversTypes
+                          ? Omit<
+                              RequiredResolvers[key],
+                              \\"__isTypeOf\\"
+                            > extends ResolverObject
+                            ? {
+                                [K in keyof NonNullable<
+                                  Exclude<ResolversTypes[key], Promise<any>>
+                                >]?: NestedBooleanObject<
+                                  NonNullable<Exclude<ResolversTypes[key], Promise<any>>>,
+                                  Omit<RequiredResolvers[key], \\"__isTypeOf\\">,
+                                  K,
+                                  NonNullable<Exclude<ResolversTypes[key], Promise<any>>>[K]
+                                >;
+                              }
+                            : never
+                          : never
+                        : never;
+                    };
+                  }
+                : never
+              : {};
+
+            export type InferFromSelectionSetObject<
+              TModel extends object,
+              TResolvers extends ResolverObject,
+              TSelectionSet extends SelectionSetObject<TModel, TResolvers>
+            > = MagicObject<{
+              -readonly [key in keyof TSelectionSet]: key extends keyof TModel
+                ? NonNullable<TModel[key]> extends any[]
+                  ?
+                      | ResolveKey<TModel, TResolvers, TSelectionSet, key>[]
+                      | (undefined extends TModel[key] ? undefined : never)
+                  :
+                      | ResolveKey<TModel, TResolvers, TSelectionSet, key>
+                      | (undefined extends TModel[key] ? undefined : never)
+                : never;
+            }>;
+            import { GraphQLResolveInfo } from \\"graphql\\";
             export type Maybe<T> = T | null;
             export type InputMaybe<T> = Maybe<T>;
             export type Exact<T extends { [key: string]: unknown }> = {
@@ -70,6 +498,9 @@ describe("generate", () => {
               | {
                   [P in keyof T]?: P extends \\" $fragmentName\\" | \\"__typename\\" ? T[P] : never;
                 };
+            export type RequireFields<T, K extends keyof T> = Omit<T, K> & {
+              [P in K]-?: NonNullable<T[P]>;
+            };
             /** All built-in and custom scalars, mapped to their actual values */
             export type Scalars = {
               ID: { input: string; output: string };
@@ -254,10 +685,372 @@ describe("generate", () => {
               NOT?: InputMaybe<UserWhere>;
             };
 
+            export type ResolverTypeWrapper<T> = Promise<T> | T;
+
+            export type ResolverWithResolve<TResult, TParent, TContext, TArgs> = {
+              resolve: ResolverFn<TResult, TParent, TContext, TArgs>;
+            };
+            export type Resolver<TResult, TParent = {}, TContext = {}, TArgs = {}> =
+              | ResolverFn<TResult, TParent, TContext, TArgs>
+              | ResolverWithResolve<TResult, TParent, TContext, TArgs>;
+
+            export type ResolverFn<TResult, TParent, TContext, TArgs> = (
+              parent: TParent,
+              args: TArgs,
+              context: TContext,
+              info: GraphQLResolveInfo
+            ) => Promise<TResult> | TResult;
+
+            export type SubscriptionSubscribeFn<TResult, TParent, TContext, TArgs> = (
+              parent: TParent,
+              args: TArgs,
+              context: TContext,
+              info: GraphQLResolveInfo
+            ) => AsyncIterable<TResult> | Promise<AsyncIterable<TResult>>;
+
+            export type SubscriptionResolveFn<TResult, TParent, TContext, TArgs> = (
+              parent: TParent,
+              args: TArgs,
+              context: TContext,
+              info: GraphQLResolveInfo
+            ) => TResult | Promise<TResult>;
+
+            export interface SubscriptionSubscriberObject<
+              TResult,
+              TKey extends string,
+              TParent,
+              TContext,
+              TArgs
+            > {
+              subscribe: SubscriptionSubscribeFn<
+                { [key in TKey]: TResult },
+                TParent,
+                TContext,
+                TArgs
+              >;
+              resolve?: SubscriptionResolveFn<
+                TResult,
+                { [key in TKey]: TResult },
+                TContext,
+                TArgs
+              >;
+            }
+
+            export interface SubscriptionResolverObject<TResult, TParent, TContext, TArgs> {
+              subscribe: SubscriptionSubscribeFn<any, TParent, TContext, TArgs>;
+              resolve: SubscriptionResolveFn<TResult, any, TContext, TArgs>;
+            }
+
+            export type SubscriptionObject<
+              TResult,
+              TKey extends string,
+              TParent,
+              TContext,
+              TArgs
+            > =
+              | SubscriptionSubscriberObject<TResult, TKey, TParent, TContext, TArgs>
+              | SubscriptionResolverObject<TResult, TParent, TContext, TArgs>;
+
+            export type SubscriptionResolver<
+              TResult,
+              TKey extends string,
+              TParent = {},
+              TContext = {},
+              TArgs = {}
+            > =
+              | ((
+                  ...args: any[]
+                ) => SubscriptionObject<TResult, TKey, TParent, TContext, TArgs>)
+              | SubscriptionObject<TResult, TKey, TParent, TContext, TArgs>;
+
+            export type TypeResolveFn<TTypes, TParent = {}, TContext = {}> = (
+              parent: TParent,
+              context: TContext,
+              info: GraphQLResolveInfo
+            ) => Maybe<TTypes> | Promise<Maybe<TTypes>>;
+
+            export type IsTypeOfResolverFn<T = {}, TContext = {}> = (
+              obj: T,
+              context: TContext,
+              info: GraphQLResolveInfo
+            ) => boolean | Promise<boolean>;
+
+            export type NextResolverFn<T> = () => Promise<T>;
+
+            export type DirectiveResolverFn<
+              TResult = {},
+              TParent = {},
+              TContext = {},
+              TArgs = {}
+            > = (
+              next: NextResolverFn<TResult>,
+              parent: TParent,
+              args: TArgs,
+              context: TContext,
+              info: GraphQLResolveInfo
+            ) => TResult | Promise<TResult>;
+
+            /** Mapping between all available schema types and the resolvers types */
+            export type ResolversTypes = {
+              Query: ResolverTypeWrapper<{}>;
+              Int: ResolverTypeWrapper<Scalars[\\"Int\\"][\\"output\\"]>;
+              String: ResolverTypeWrapper<Scalars[\\"String\\"][\\"output\\"]>;
+              Mutation: ResolverTypeWrapper<{}>;
+              SortDirection: SortDirection;
+              CreateInfo: ResolverTypeWrapper<CreateInfo>;
+              CreateUsersMutationResponse: ResolverTypeWrapper<CreateUsersMutationResponse>;
+              DeleteInfo: ResolverTypeWrapper<DeleteInfo>;
+              PageInfo: ResolverTypeWrapper<PageInfo>;
+              Boolean: ResolverTypeWrapper<Scalars[\\"Boolean\\"][\\"output\\"]>;
+              StringAggregateSelection: ResolverTypeWrapper<StringAggregateSelection>;
+              UpdateInfo: ResolverTypeWrapper<UpdateInfo>;
+              UpdateUsersMutationResponse: ResolverTypeWrapper<UpdateUsersMutationResponse>;
+              User: ResolverTypeWrapper<User>;
+              UserAggregateSelection: ResolverTypeWrapper<UserAggregateSelection>;
+              UserEdge: ResolverTypeWrapper<UserEdge>;
+              UsersConnection: ResolverTypeWrapper<UsersConnection>;
+              UserCreateInput: UserCreateInput;
+              UserOptions: UserOptions;
+              UserSort: UserSort;
+              UserUpdateInput: UserUpdateInput;
+              UserWhere: UserWhere;
+            };
+
+            /** Mapping between all available schema types and the resolvers parents */
+            export type ResolversParentTypes = {
+              Query: {};
+              Int: Scalars[\\"Int\\"][\\"output\\"];
+              String: Scalars[\\"String\\"][\\"output\\"];
+              Mutation: {};
+              CreateInfo: CreateInfo;
+              CreateUsersMutationResponse: CreateUsersMutationResponse;
+              DeleteInfo: DeleteInfo;
+              PageInfo: PageInfo;
+              Boolean: Scalars[\\"Boolean\\"][\\"output\\"];
+              StringAggregateSelection: StringAggregateSelection;
+              UpdateInfo: UpdateInfo;
+              UpdateUsersMutationResponse: UpdateUsersMutationResponse;
+              User: User;
+              UserAggregateSelection: UserAggregateSelection;
+              UserEdge: UserEdge;
+              UsersConnection: UsersConnection;
+              UserCreateInput: UserCreateInput;
+              UserOptions: UserOptions;
+              UserSort: UserSort;
+              UserUpdateInput: UserUpdateInput;
+              UserWhere: UserWhere;
+            };
+
+            export type QueryResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"Query\\"] = ResolversParentTypes[\\"Query\\"]
+            > = {
+              users?: Resolver<
+                Array<ResolversTypes[\\"User\\"]>,
+                ParentType,
+                ContextType,
+                Partial<QueryUsersArgs>
+              >;
+              usersConnection?: Resolver<
+                ResolversTypes[\\"UsersConnection\\"],
+                ParentType,
+                ContextType,
+                Partial<QueryUsersConnectionArgs>
+              >;
+              usersAggregate?: Resolver<
+                ResolversTypes[\\"UserAggregateSelection\\"],
+                ParentType,
+                ContextType,
+                Partial<QueryUsersAggregateArgs>
+              >;
+            };
+
+            export type MutationResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"Mutation\\"] = ResolversParentTypes[\\"Mutation\\"]
+            > = {
+              createUsers?: Resolver<
+                ResolversTypes[\\"CreateUsersMutationResponse\\"],
+                ParentType,
+                ContextType,
+                RequireFields<MutationCreateUsersArgs, \\"input\\">
+              >;
+              deleteUsers?: Resolver<
+                ResolversTypes[\\"DeleteInfo\\"],
+                ParentType,
+                ContextType,
+                Partial<MutationDeleteUsersArgs>
+              >;
+              updateUsers?: Resolver<
+                ResolversTypes[\\"UpdateUsersMutationResponse\\"],
+                ParentType,
+                ContextType,
+                Partial<MutationUpdateUsersArgs>
+              >;
+            };
+
+            export type CreateInfoResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"CreateInfo\\"] = ResolversParentTypes[\\"CreateInfo\\"]
+            > = {
+              bookmark?: Resolver<Maybe<ResolversTypes[\\"String\\"]>, ParentType, ContextType>;
+              nodesCreated?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              relationshipsCreated?: Resolver<
+                ResolversTypes[\\"Int\\"],
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type CreateUsersMutationResponseResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"CreateUsersMutationResponse\\"] = ResolversParentTypes[\\"CreateUsersMutationResponse\\"]
+            > = {
+              info?: Resolver<ResolversTypes[\\"CreateInfo\\"], ParentType, ContextType>;
+              users?: Resolver<Array<ResolversTypes[\\"User\\"]>, ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type DeleteInfoResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"DeleteInfo\\"] = ResolversParentTypes[\\"DeleteInfo\\"]
+            > = {
+              bookmark?: Resolver<Maybe<ResolversTypes[\\"String\\"]>, ParentType, ContextType>;
+              nodesDeleted?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              relationshipsDeleted?: Resolver<
+                ResolversTypes[\\"Int\\"],
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type PageInfoResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"PageInfo\\"] = ResolversParentTypes[\\"PageInfo\\"]
+            > = {
+              hasNextPage?: Resolver<ResolversTypes[\\"Boolean\\"], ParentType, ContextType>;
+              hasPreviousPage?: Resolver<
+                ResolversTypes[\\"Boolean\\"],
+                ParentType,
+                ContextType
+              >;
+              startCursor?: Resolver<
+                Maybe<ResolversTypes[\\"String\\"]>,
+                ParentType,
+                ContextType
+              >;
+              endCursor?: Resolver<
+                Maybe<ResolversTypes[\\"String\\"]>,
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type StringAggregateSelectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"StringAggregateSelection\\"] = ResolversParentTypes[\\"StringAggregateSelection\\"]
+            > = {
+              shortest?: Resolver<Maybe<ResolversTypes[\\"String\\"]>, ParentType, ContextType>;
+              longest?: Resolver<Maybe<ResolversTypes[\\"String\\"]>, ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type UpdateInfoResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"UpdateInfo\\"] = ResolversParentTypes[\\"UpdateInfo\\"]
+            > = {
+              bookmark?: Resolver<Maybe<ResolversTypes[\\"String\\"]>, ParentType, ContextType>;
+              nodesCreated?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              nodesDeleted?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              relationshipsCreated?: Resolver<
+                ResolversTypes[\\"Int\\"],
+                ParentType,
+                ContextType
+              >;
+              relationshipsDeleted?: Resolver<
+                ResolversTypes[\\"Int\\"],
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type UpdateUsersMutationResponseResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"UpdateUsersMutationResponse\\"] = ResolversParentTypes[\\"UpdateUsersMutationResponse\\"]
+            > = {
+              info?: Resolver<ResolversTypes[\\"UpdateInfo\\"], ParentType, ContextType>;
+              users?: Resolver<Array<ResolversTypes[\\"User\\"]>, ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type UserResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"User\\"] = ResolversParentTypes[\\"User\\"]
+            > = {
+              name?: Resolver<Maybe<ResolversTypes[\\"String\\"]>, ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type UserAggregateSelectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"UserAggregateSelection\\"] = ResolversParentTypes[\\"UserAggregateSelection\\"]
+            > = {
+              count?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              name?: Resolver<
+                ResolversTypes[\\"StringAggregateSelection\\"],
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type UserEdgeResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"UserEdge\\"] = ResolversParentTypes[\\"UserEdge\\"]
+            > = {
+              cursor?: Resolver<ResolversTypes[\\"String\\"], ParentType, ContextType>;
+              node?: Resolver<ResolversTypes[\\"User\\"], ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type UsersConnectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"UsersConnection\\"] = ResolversParentTypes[\\"UsersConnection\\"]
+            > = {
+              totalCount?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              pageInfo?: Resolver<ResolversTypes[\\"PageInfo\\"], ParentType, ContextType>;
+              edges?: Resolver<Array<ResolversTypes[\\"UserEdge\\"]>, ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type Resolvers<ContextType = any> = {
+              Query?: QueryResolvers<ContextType>;
+              Mutation?: MutationResolvers<ContextType>;
+              CreateInfo?: CreateInfoResolvers<ContextType>;
+              CreateUsersMutationResponse?: CreateUsersMutationResponseResolvers<ContextType>;
+              DeleteInfo?: DeleteInfoResolvers<ContextType>;
+              PageInfo?: PageInfoResolvers<ContextType>;
+              StringAggregateSelection?: StringAggregateSelectionResolvers<ContextType>;
+              UpdateInfo?: UpdateInfoResolvers<ContextType>;
+              UpdateUsersMutationResponse?: UpdateUsersMutationResponseResolvers<ContextType>;
+              User?: UserResolvers<ContextType>;
+              UserAggregateSelection?: UserAggregateSelectionResolvers<ContextType>;
+              UserEdge?: UserEdgeResolvers<ContextType>;
+              UsersConnection?: UsersConnectionResolvers<ContextType>;
+            };
+
             export interface UserAggregateSelectionInput {
               count?: boolean;
               name?: boolean;
             }
+
+            export type UserSelectionSet = SelectionSetObject<User, UserResolvers>;
+            export type InferFromUserSelectionSet<TSelectionSet extends UserSelectionSet> =
+              InferFromSelectionSetObject<User, UserResolvers, TSelectionSet>;
 
             export declare class UserModel {
               public find(args?: {
@@ -269,6 +1062,15 @@ describe("generate", () => {
                 context?: any;
                 rootValue?: any;
               }): Promise<User[]>;
+              public findSafe<TSelectionSet extends UserSelectionSet>(args?: {
+                where?: UserWhere;
+
+                options?: UserOptions;
+                selectionSet?: TSelectionSet;
+                args?: any;
+                context?: any;
+                rootValue?: any;
+              }): Promise<Prettify<InferFromUserSelectionSet<TSelectionSet>>[]>;
               public create(args: {
                 input: UserCreateInput[];
                 selectionSet?: string | DocumentNode | SelectionSetNode;
@@ -329,6 +1131,434 @@ describe("generate", () => {
 
         expect(generated).toMatchInlineSnapshot(`
             "import type { SelectionSetNode, DocumentNode } from \\"graphql\\";
+            import type { RawGQL } from \\"@neo4j/graphql-ogm\\";
+            export type RequiredResolvers = Required<Resolvers>;
+            export type Primitive = string | number | boolean;
+            export type Prettify<T> = {
+              [K in keyof T]: T[K];
+            } & {};
+            export type AddRawGQL<T> = NonNullable<T> extends (infer TItem)[]
+              ? (TItem | RawGQL)[]
+              : NonNullable<T> extends Primitive
+              ? T
+              : IsAny<NonNullable<T>> extends true
+              ? T
+              : {
+                  [key in keyof T]: AddRawGQL<T[key]> | RawGQL;
+                };
+
+            export type AddRawGQLToOptions<TProps> = TProps extends { where?: infer TWhere }
+              ? {
+                  where?: AddRawGQL<NonNullable<TWhere>>;
+                } & AddRawGQLToOptions<Omit<TProps, \\"where\\">>
+              : TProps extends { sort?: infer TSort }
+              ? {
+                  sort?: NonNullable<TSort> extends (infer TItem)[]
+                    ? AddRawGQL<NonNullable<TItem>>[]
+                    : never;
+                }
+              : {};
+
+            export type ResolverArgs<
+              TModel extends object,
+              TKey extends keyof TModel,
+              TResolvers extends { [key: PropertyKey]: Resolver<any, any, any, any> }
+            > = TModel[TKey] extends Primitive
+              ? never
+              : NonNullable<TResolvers[TKey]> extends Resolver<any, any, any, infer Props>
+              ? \\"directed\\" extends keyof Props
+                ? Omit<Props, \\"directed\\" | \\"where\\" | \\"sort\\"> & {
+                    directed?: boolean;
+                  } & AddRawGQLToOptions<Props>
+                : {}
+              : {};
+
+            export type UnionToIntersection<U> = (
+              U extends any ? (k: U) => void : never
+            ) extends (k: infer I) => void
+              ? I
+              : never;
+            type LastOf<T> = UnionToIntersection<
+              T extends any ? () => T : never
+            > extends () => infer R
+              ? R
+              : never;
+
+            type Push<T extends any[], V> = [...T, V];
+
+            export type TuplifyUnion<
+              T,
+              L = LastOf<T>,
+              N = [T] extends [never] ? true : false
+            > = true extends N ? [] : Push<TuplifyUnion<Exclude<T, L>>, L>;
+
+            // This is pure magic
+            export type MagicArray<TArray extends any[]> =
+              NonNullable<TArray> extends (infer TItem)[] ? TItem[] : never;
+            export type MagicObject<TElement> =
+              NonNullable<TElement> extends (infer TItem)[]
+                ? TItem[]
+                : NonNullable<TElement> extends Primitive
+                ? TElement
+                : {
+                    [key in keyof TElement as TElement[key] extends never
+                      ? never
+                      : key]: MagicObject<TElement[key]>;
+                  };
+
+            export type StripNeverKeys<TElement> = TElement extends object
+              ? {
+                  [key in keyof TElement as [TElement[key]] extends [never]
+                    ? never
+                    : TElement[key] extends never[]
+                    ? never
+                    : key]: TElement[key];
+                }
+              : TElement;
+
+            export type ClearObjectWithNeverKeys<
+              TElement,
+              TStripped = StripNeverKeys<TElement>
+            > = [keyof Omit<TElement, keyof TStripped>] extends [never] ? TStripped : never;
+
+            export type StripNeverKeysAddTypename<
+              TElement,
+              TKey,
+              TStripped = ClearObjectWithNeverKeys<TElement>
+            > = [keyof TStripped] extends [never]
+              ? never
+              : TStripped & { __typename: TKey };
+
+            type RetrieveType<TItem> = Exclude<
+              TItem,
+              Promise<any>
+            > extends ResolverTypeWrapper<infer TValue>
+              ? TValue extends { __typename?: infer TName }
+                ? TItem extends object
+                  ? TName extends keyof Resolvers
+                    ? \\"__isTypeOf\\" extends keyof RequiredResolvers[TName]
+                      ? Omit<RequiredResolvers[TName], \\"__isTypeOf\\"> extends {
+                          [key: string]: Resolver<any, any, any, any>;
+                        }
+                        ? {
+                            Model: Exclude<TItem, Promise<any>>;
+                            Resolvers: Omit<RequiredResolvers[TName], \\"__isTypeOf\\">;
+                          }
+                        : never
+                      : never
+                    : never
+                  : never
+                : never
+              : never;
+
+            export type ResolverReturnType<
+              TModel extends object,
+              TKey extends keyof TModel,
+              TResolvers extends { [key: PropertyKey]: Resolver<any, any, any, any> }
+            > = TModel[TKey] extends Primitive
+              ? never
+              : NonNullable<TResolvers[TKey]> extends Resolver<infer Props, any, any, any>
+              ? Props extends (infer TItem)[]
+                ? RetrieveType<Exclude<TItem, Promise<any>>>
+                : RetrieveType<Exclude<Props, Promise<any>>>
+              : never;
+
+            export type ResolverObject = {
+              [key: PropertyKey]: Resolver<any, any, any> | Resolver<any, any, any, any>;
+            };
+
+            export type ResolveKey<
+              TModel extends object,
+              TResolvers extends ResolverObject,
+              TItem,
+              TKey,
+              TOmittedElement = TKey extends keyof TItem
+                ? Omit<
+                    NonNullable<TItem[TKey]>,
+                    \\"where\\" | \\"directed\\" | \\"options\\" | \\"after\\" | \\"first\\" | \\"sort\\"
+                  >
+                : never
+            > = TKey extends keyof TModel
+              ? NonNullable<TModel[TKey]> extends Primitive
+                ? TModel[TKey]
+                : ResolverReturnType<TModel, TKey, TResolvers> extends {
+                    Model: infer NestedTModel;
+                    Resolvers: infer NestedResolvers;
+                  }
+                ? NestedTModel extends object
+                  ? NestedResolvers extends ResolverObject
+                    ? TKey extends keyof TItem
+                      ? \\"on\\" extends keyof TOmittedElement
+                        ?
+                            | ({
+                                -readonly [key in keyof TOmittedElement[\\"on\\"]]: StripNeverKeysAddTypename<
+                                  {
+                                    -readonly [K in keyof TOmittedElement[\\"on\\"][key]]: K extends keyof NestedTModel
+                                      ? NestedTModel[K] extends any[]
+                                        ? MagicArray<
+                                            ResolveKey<
+                                              NestedTModel,
+                                              NestedResolvers,
+                                              TOmittedElement[\\"on\\"][key],
+                                              K
+                                            >[]
+                                          >
+                                        : ResolveKey<
+                                            NestedTModel,
+                                            NestedResolvers,
+                                            TOmittedElement[\\"on\\"][key],
+                                            K
+                                          >
+                                      : never;
+                                  },
+                                  key
+                                >;
+                              }[keyof TOmittedElement[\\"on\\"]] &
+                                ResolveKey<
+                                  TModel,
+                                  TResolvers,
+                                  Omit<TItem, TKey> & {
+                                    [key in TKey]: Omit<TOmittedElement, \\"on\\">;
+                                  },
+                                  TKey
+                                >)
+                            | (undefined extends TModel[TKey]
+                                ? NonNullable<TModel[TKey]> extends any[]
+                                  ? never
+                                  : undefined
+                                : never)
+                            | (undefined extends TItem[TKey]
+                                ? NonNullable<TModel[TKey]> extends any[]
+                                  ? never
+                                  : undefined
+                                : never)
+                        : ClearObjectWithNeverKeys<
+                            | {
+                                -readonly [key in keyof TOmittedElement as key extends keyof NestedTModel
+                                  ? key
+                                  : never]: key extends keyof NestedTModel
+                                  ? NestedTModel[key] extends any[]
+                                    ? MagicArray<
+                                        ResolveKey<
+                                          NestedTModel,
+                                          NestedResolvers,
+                                          TOmittedElement,
+                                          key
+                                        >[]
+                                      >
+                                    : ResolveKey<
+                                        NestedTModel,
+                                        NestedResolvers,
+                                        TOmittedElement,
+                                        key
+                                      >
+                                  : never;
+                              }
+                            | (undefined extends TModel[TKey]
+                                ? NonNullable<TModel[TKey]> extends any[]
+                                  ? never
+                                  : undefined
+                                : never)
+                            | (undefined extends TItem[TKey]
+                                ? NonNullable<TModel[TKey]> extends any[]
+                                  ? never
+                                  : undefined
+                                : never)
+                          >
+                      : never
+                    : never
+                  : TModel[TKey] extends (infer TArrayItem)[]
+                  ? NonNullable<TArrayItem> extends Primitive
+                    ? TArrayItem
+                    : never
+                  : never
+                : never
+              : never;
+
+            //Only if TValue = any, this is true
+            export type IsAny<TValue> = unknown extends TValue ? true : false;
+
+            export type NestedBooleanObject<
+              TModel extends object,
+              TResolvers extends ResolverObject,
+              TKey extends keyof TModel,
+              TElement,
+              RequiredValue extends NonNullable<TElement> = NonNullable<TElement>
+            > = IsAny<RequiredValue> extends true
+              ? boolean
+              : RequiredValue extends object
+              ? RequiredValue extends (infer TItem)[]
+                ? NonNullable<TItem> extends Primitive
+                  ? boolean
+                  : {
+                      [key in keyof TItem]?: ResolverReturnType<
+                        TModel,
+                        TKey,
+                        TResolvers
+                      > extends {
+                        Model: infer NestedModel;
+                        Resolvers: infer NestedResolvers;
+                      }
+                        ? NestedModel extends object
+                          ? NestedResolvers extends ResolverObject
+                            ? key extends keyof NestedModel
+                              ? NonNullable<TItem[key]> extends object
+                                ? NonNullable<TItem[key]> extends any[]
+                                  ? NestedBooleanObject<
+                                      NestedModel,
+                                      NestedResolvers,
+                                      key,
+                                      NonNullable<NonNullable<TItem>[key]>
+                                    >
+                                  : IsAny<NonNullable<TItem[key]>> extends true
+                                  ? boolean
+                                  : \\"__typename\\" extends keyof NonNullable<TItem[key]>
+                                  ? NestedBooleanObject<
+                                      NestedModel,
+                                      NestedResolvers,
+                                      key,
+                                      UnionToIntersection<
+                                        Omit<
+                                          NonNullable<NonNullable<TItem>[key]>,
+                                          \\"__typename\\"
+                                        >
+                                      > & {
+                                        __typename: NonNullable<
+                                          NonNullable<TItem[key]>[\\"__typename\\"]
+                                        >;
+                                      }
+                                    >
+                                  : never
+                                : boolean
+                              : never
+                            : never
+                          : never
+                        : never;
+                    } & ResolverArgs<TModel, TKey, TResolvers> &
+                      BooleanOn<TElement>
+                : {
+                    [key in keyof RequiredValue]?: ResolverReturnType<
+                      TModel,
+                      TKey,
+                      TResolvers
+                    > extends { Model: infer NestedModel; Resolvers: infer NestedResolvers }
+                      ? NestedModel extends object
+                        ? NestedResolvers extends ResolverObject
+                          ? key extends keyof NestedModel
+                            ? NonNullable<RequiredValue[key]> extends any[]
+                              ? NestedBooleanObject<
+                                  NestedModel,
+                                  NestedResolvers,
+                                  key,
+                                  NonNullable<RequiredValue[key]>
+                                >
+                              : NonNullable<RequiredValue[key]> extends object
+                              ? IsAny<NonNullable<RequiredValue[key]>> extends true
+                                ? boolean
+                                : \\"__typename\\" extends keyof NonNullable<RequiredValue[key]>
+                                ? NestedBooleanObject<
+                                    NestedModel,
+                                    NestedResolvers,
+                                    key,
+                                    UnionToIntersection<
+                                      Omit<NonNullable<RequiredValue[key]>, \\"__typename\\">
+                                    > & {
+                                      __typename: NonNullable<
+                                        NonNullable<RequiredValue[key]>[\\"__typename\\"]
+                                      >;
+                                    }
+                                  >
+                                : never
+                              : boolean
+                            : never
+                          : never
+                        : never
+                      : never;
+                  } & BooleanOn<TElement> &
+                    ResolverArgs<TModel, TKey, TResolvers>
+              : boolean;
+
+            export type SelectionSetObject<
+              TModel extends object,
+              TResolvers extends ResolverObject
+            > = {
+              [key in keyof TModel]?: NonNullable<TModel[key]> extends Primitive
+                ? boolean
+                : NonNullable<TModel[key]> extends (infer TItem)[]
+                ? \\"__typename\\" extends keyof TItem
+                  ? NestedBooleanObject<
+                      TModel,
+                      TResolvers,
+                      key,
+                      Prettify<
+                        UnionToIntersection<Omit<NonNullable<TItem>, \\"__typename\\">> & {
+                          __typename: NonNullable<NonNullable<TItem>[\\"__typename\\"]>;
+                        }
+                      >
+                    >
+                  : NonNullable<TItem> extends Primitive
+                  ? boolean
+                  : never
+                : \\"__typename\\" extends keyof NonNullable<TModel[key]>
+                ? NestedBooleanObject<
+                    TModel,
+                    TResolvers,
+                    key,
+                    Prettify<
+                      UnionToIntersection<Omit<NonNullable<TModel[key]>, \\"__typename\\">> & {
+                        __typename: NonNullable<NonNullable<TModel[key]>[\\"__typename\\"]>;
+                      }
+                    >
+                  >
+                : never;
+            };
+
+            type BooleanOn<TElement> = TElement extends { __typename: infer Typename }
+              ? TuplifyUnion<NonNullable<Typename>>[\\"length\\"] extends 1
+                ? {}
+                : NonNullable<Typename> extends string
+                ? {
+                    on?: {
+                      [key in NonNullable<Typename>]?: key extends keyof RequiredResolvers
+                        ? key extends keyof ResolversTypes
+                          ? Omit<
+                              RequiredResolvers[key],
+                              \\"__isTypeOf\\"
+                            > extends ResolverObject
+                            ? {
+                                [K in keyof NonNullable<
+                                  Exclude<ResolversTypes[key], Promise<any>>
+                                >]?: NestedBooleanObject<
+                                  NonNullable<Exclude<ResolversTypes[key], Promise<any>>>,
+                                  Omit<RequiredResolvers[key], \\"__isTypeOf\\">,
+                                  K,
+                                  NonNullable<Exclude<ResolversTypes[key], Promise<any>>>[K]
+                                >;
+                              }
+                            : never
+                          : never
+                        : never;
+                    };
+                  }
+                : never
+              : {};
+
+            export type InferFromSelectionSetObject<
+              TModel extends object,
+              TResolvers extends ResolverObject,
+              TSelectionSet extends SelectionSetObject<TModel, TResolvers>
+            > = MagicObject<{
+              -readonly [key in keyof TSelectionSet]: key extends keyof TModel
+                ? NonNullable<TModel[key]> extends any[]
+                  ?
+                      | ResolveKey<TModel, TResolvers, TSelectionSet, key>[]
+                      | (undefined extends TModel[key] ? undefined : never)
+                  :
+                      | ResolveKey<TModel, TResolvers, TSelectionSet, key>
+                      | (undefined extends TModel[key] ? undefined : never)
+                : never;
+            }>;
+            import { GraphQLResolveInfo } from \\"graphql\\";
             export type Maybe<T> = T | null;
             export type InputMaybe<T> = Maybe<T>;
             export type Exact<T extends { [key: string]: unknown }> = {
@@ -349,6 +1579,9 @@ describe("generate", () => {
               | {
                   [P in keyof T]?: P extends \\" $fragmentName\\" | \\"__typename\\" ? T[P] : never;
                 };
+            export type RequireFields<T, K extends keyof T> = Omit<T, K> & {
+              [P in K]-?: NonNullable<T[P]>;
+            };
             /** All built-in and custom scalars, mapped to their actual values */
             export type Scalars = {
               ID: { input: string; output: string };
@@ -580,10 +1813,402 @@ describe("generate", () => {
               NOT?: InputMaybe<UserWhere>;
             };
 
+            export type ResolverTypeWrapper<T> = Promise<T> | T;
+
+            export type ResolverWithResolve<TResult, TParent, TContext, TArgs> = {
+              resolve: ResolverFn<TResult, TParent, TContext, TArgs>;
+            };
+            export type Resolver<TResult, TParent = {}, TContext = {}, TArgs = {}> =
+              | ResolverFn<TResult, TParent, TContext, TArgs>
+              | ResolverWithResolve<TResult, TParent, TContext, TArgs>;
+
+            export type ResolverFn<TResult, TParent, TContext, TArgs> = (
+              parent: TParent,
+              args: TArgs,
+              context: TContext,
+              info: GraphQLResolveInfo
+            ) => Promise<TResult> | TResult;
+
+            export type SubscriptionSubscribeFn<TResult, TParent, TContext, TArgs> = (
+              parent: TParent,
+              args: TArgs,
+              context: TContext,
+              info: GraphQLResolveInfo
+            ) => AsyncIterable<TResult> | Promise<AsyncIterable<TResult>>;
+
+            export type SubscriptionResolveFn<TResult, TParent, TContext, TArgs> = (
+              parent: TParent,
+              args: TArgs,
+              context: TContext,
+              info: GraphQLResolveInfo
+            ) => TResult | Promise<TResult>;
+
+            export interface SubscriptionSubscriberObject<
+              TResult,
+              TKey extends string,
+              TParent,
+              TContext,
+              TArgs
+            > {
+              subscribe: SubscriptionSubscribeFn<
+                { [key in TKey]: TResult },
+                TParent,
+                TContext,
+                TArgs
+              >;
+              resolve?: SubscriptionResolveFn<
+                TResult,
+                { [key in TKey]: TResult },
+                TContext,
+                TArgs
+              >;
+            }
+
+            export interface SubscriptionResolverObject<TResult, TParent, TContext, TArgs> {
+              subscribe: SubscriptionSubscribeFn<any, TParent, TContext, TArgs>;
+              resolve: SubscriptionResolveFn<TResult, any, TContext, TArgs>;
+            }
+
+            export type SubscriptionObject<
+              TResult,
+              TKey extends string,
+              TParent,
+              TContext,
+              TArgs
+            > =
+              | SubscriptionSubscriberObject<TResult, TKey, TParent, TContext, TArgs>
+              | SubscriptionResolverObject<TResult, TParent, TContext, TArgs>;
+
+            export type SubscriptionResolver<
+              TResult,
+              TKey extends string,
+              TParent = {},
+              TContext = {},
+              TArgs = {}
+            > =
+              | ((
+                  ...args: any[]
+                ) => SubscriptionObject<TResult, TKey, TParent, TContext, TArgs>)
+              | SubscriptionObject<TResult, TKey, TParent, TContext, TArgs>;
+
+            export type TypeResolveFn<TTypes, TParent = {}, TContext = {}> = (
+              parent: TParent,
+              context: TContext,
+              info: GraphQLResolveInfo
+            ) => Maybe<TTypes> | Promise<Maybe<TTypes>>;
+
+            export type IsTypeOfResolverFn<T = {}, TContext = {}> = (
+              obj: T,
+              context: TContext,
+              info: GraphQLResolveInfo
+            ) => boolean | Promise<boolean>;
+
+            export type NextResolverFn<T> = () => Promise<T>;
+
+            export type DirectiveResolverFn<
+              TResult = {},
+              TParent = {},
+              TContext = {},
+              TArgs = {}
+            > = (
+              next: NextResolverFn<TResult>,
+              parent: TParent,
+              args: TArgs,
+              context: TContext,
+              info: GraphQLResolveInfo
+            ) => TResult | Promise<TResult>;
+
+            /** Mapping between all available schema types and the resolvers types */
+            export type ResolversTypes = {
+              Query: ResolverTypeWrapper<{}>;
+              String: ResolverTypeWrapper<Scalars[\\"String\\"][\\"output\\"]>;
+              Int: ResolverTypeWrapper<Scalars[\\"Int\\"][\\"output\\"]>;
+              Mutation: ResolverTypeWrapper<{}>;
+              SortDirection: SortDirection;
+              CreateInfo: ResolverTypeWrapper<CreateInfo>;
+              CreateUsersMutationResponse: ResolverTypeWrapper<CreateUsersMutationResponse>;
+              DeleteInfo: ResolverTypeWrapper<DeleteInfo>;
+              PageInfo: ResolverTypeWrapper<PageInfo>;
+              Boolean: ResolverTypeWrapper<Scalars[\\"Boolean\\"][\\"output\\"]>;
+              StringAggregateSelection: ResolverTypeWrapper<StringAggregateSelection>;
+              UpdateInfo: ResolverTypeWrapper<UpdateInfo>;
+              UpdateUsersMutationResponse: ResolverTypeWrapper<UpdateUsersMutationResponse>;
+              User: ResolverTypeWrapper<User>;
+              UserAggregateSelection: ResolverTypeWrapper<UserAggregateSelection>;
+              UserEdge: ResolverTypeWrapper<UserEdge>;
+              UserFulltextResult: ResolverTypeWrapper<UserFulltextResult>;
+              Float: ResolverTypeWrapper<Scalars[\\"Float\\"][\\"output\\"]>;
+              UsersConnection: ResolverTypeWrapper<UsersConnection>;
+              FloatWhere: FloatWhere;
+              UserCreateInput: UserCreateInput;
+              UserFulltext: UserFulltext;
+              UserFulltextSort: UserFulltextSort;
+              UserFulltextWhere: UserFulltextWhere;
+              UserOptions: UserOptions;
+              UserSort: UserSort;
+              UserUpdateInput: UserUpdateInput;
+              UserUserNameFulltext: UserUserNameFulltext;
+              UserWhere: UserWhere;
+            };
+
+            /** Mapping between all available schema types and the resolvers parents */
+            export type ResolversParentTypes = {
+              Query: {};
+              String: Scalars[\\"String\\"][\\"output\\"];
+              Int: Scalars[\\"Int\\"][\\"output\\"];
+              Mutation: {};
+              CreateInfo: CreateInfo;
+              CreateUsersMutationResponse: CreateUsersMutationResponse;
+              DeleteInfo: DeleteInfo;
+              PageInfo: PageInfo;
+              Boolean: Scalars[\\"Boolean\\"][\\"output\\"];
+              StringAggregateSelection: StringAggregateSelection;
+              UpdateInfo: UpdateInfo;
+              UpdateUsersMutationResponse: UpdateUsersMutationResponse;
+              User: User;
+              UserAggregateSelection: UserAggregateSelection;
+              UserEdge: UserEdge;
+              UserFulltextResult: UserFulltextResult;
+              Float: Scalars[\\"Float\\"][\\"output\\"];
+              UsersConnection: UsersConnection;
+              FloatWhere: FloatWhere;
+              UserCreateInput: UserCreateInput;
+              UserFulltext: UserFulltext;
+              UserFulltextSort: UserFulltextSort;
+              UserFulltextWhere: UserFulltextWhere;
+              UserOptions: UserOptions;
+              UserSort: UserSort;
+              UserUpdateInput: UserUpdateInput;
+              UserUserNameFulltext: UserUserNameFulltext;
+              UserWhere: UserWhere;
+            };
+
+            export type QueryResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"Query\\"] = ResolversParentTypes[\\"Query\\"]
+            > = {
+              usersFulltextUserName?: Resolver<
+                Array<ResolversTypes[\\"UserFulltextResult\\"]>,
+                ParentType,
+                ContextType,
+                RequireFields<QueryUsersFulltextUserNameArgs, \\"phrase\\">
+              >;
+              users?: Resolver<
+                Array<ResolversTypes[\\"User\\"]>,
+                ParentType,
+                ContextType,
+                Partial<QueryUsersArgs>
+              >;
+              usersConnection?: Resolver<
+                ResolversTypes[\\"UsersConnection\\"],
+                ParentType,
+                ContextType,
+                Partial<QueryUsersConnectionArgs>
+              >;
+              usersAggregate?: Resolver<
+                ResolversTypes[\\"UserAggregateSelection\\"],
+                ParentType,
+                ContextType,
+                Partial<QueryUsersAggregateArgs>
+              >;
+            };
+
+            export type MutationResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"Mutation\\"] = ResolversParentTypes[\\"Mutation\\"]
+            > = {
+              createUsers?: Resolver<
+                ResolversTypes[\\"CreateUsersMutationResponse\\"],
+                ParentType,
+                ContextType,
+                RequireFields<MutationCreateUsersArgs, \\"input\\">
+              >;
+              deleteUsers?: Resolver<
+                ResolversTypes[\\"DeleteInfo\\"],
+                ParentType,
+                ContextType,
+                Partial<MutationDeleteUsersArgs>
+              >;
+              updateUsers?: Resolver<
+                ResolversTypes[\\"UpdateUsersMutationResponse\\"],
+                ParentType,
+                ContextType,
+                Partial<MutationUpdateUsersArgs>
+              >;
+            };
+
+            export type CreateInfoResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"CreateInfo\\"] = ResolversParentTypes[\\"CreateInfo\\"]
+            > = {
+              bookmark?: Resolver<Maybe<ResolversTypes[\\"String\\"]>, ParentType, ContextType>;
+              nodesCreated?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              relationshipsCreated?: Resolver<
+                ResolversTypes[\\"Int\\"],
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type CreateUsersMutationResponseResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"CreateUsersMutationResponse\\"] = ResolversParentTypes[\\"CreateUsersMutationResponse\\"]
+            > = {
+              info?: Resolver<ResolversTypes[\\"CreateInfo\\"], ParentType, ContextType>;
+              users?: Resolver<Array<ResolversTypes[\\"User\\"]>, ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type DeleteInfoResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"DeleteInfo\\"] = ResolversParentTypes[\\"DeleteInfo\\"]
+            > = {
+              bookmark?: Resolver<Maybe<ResolversTypes[\\"String\\"]>, ParentType, ContextType>;
+              nodesDeleted?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              relationshipsDeleted?: Resolver<
+                ResolversTypes[\\"Int\\"],
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type PageInfoResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"PageInfo\\"] = ResolversParentTypes[\\"PageInfo\\"]
+            > = {
+              hasNextPage?: Resolver<ResolversTypes[\\"Boolean\\"], ParentType, ContextType>;
+              hasPreviousPage?: Resolver<
+                ResolversTypes[\\"Boolean\\"],
+                ParentType,
+                ContextType
+              >;
+              startCursor?: Resolver<
+                Maybe<ResolversTypes[\\"String\\"]>,
+                ParentType,
+                ContextType
+              >;
+              endCursor?: Resolver<
+                Maybe<ResolversTypes[\\"String\\"]>,
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type StringAggregateSelectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"StringAggregateSelection\\"] = ResolversParentTypes[\\"StringAggregateSelection\\"]
+            > = {
+              shortest?: Resolver<Maybe<ResolversTypes[\\"String\\"]>, ParentType, ContextType>;
+              longest?: Resolver<Maybe<ResolversTypes[\\"String\\"]>, ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type UpdateInfoResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"UpdateInfo\\"] = ResolversParentTypes[\\"UpdateInfo\\"]
+            > = {
+              bookmark?: Resolver<Maybe<ResolversTypes[\\"String\\"]>, ParentType, ContextType>;
+              nodesCreated?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              nodesDeleted?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              relationshipsCreated?: Resolver<
+                ResolversTypes[\\"Int\\"],
+                ParentType,
+                ContextType
+              >;
+              relationshipsDeleted?: Resolver<
+                ResolversTypes[\\"Int\\"],
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type UpdateUsersMutationResponseResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"UpdateUsersMutationResponse\\"] = ResolversParentTypes[\\"UpdateUsersMutationResponse\\"]
+            > = {
+              info?: Resolver<ResolversTypes[\\"UpdateInfo\\"], ParentType, ContextType>;
+              users?: Resolver<Array<ResolversTypes[\\"User\\"]>, ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type UserResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"User\\"] = ResolversParentTypes[\\"User\\"]
+            > = {
+              name?: Resolver<Maybe<ResolversTypes[\\"String\\"]>, ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type UserAggregateSelectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"UserAggregateSelection\\"] = ResolversParentTypes[\\"UserAggregateSelection\\"]
+            > = {
+              count?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              name?: Resolver<
+                ResolversTypes[\\"StringAggregateSelection\\"],
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type UserEdgeResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"UserEdge\\"] = ResolversParentTypes[\\"UserEdge\\"]
+            > = {
+              cursor?: Resolver<ResolversTypes[\\"String\\"], ParentType, ContextType>;
+              node?: Resolver<ResolversTypes[\\"User\\"], ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type UserFulltextResultResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"UserFulltextResult\\"] = ResolversParentTypes[\\"UserFulltextResult\\"]
+            > = {
+              score?: Resolver<ResolversTypes[\\"Float\\"], ParentType, ContextType>;
+              user?: Resolver<ResolversTypes[\\"User\\"], ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type UsersConnectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"UsersConnection\\"] = ResolversParentTypes[\\"UsersConnection\\"]
+            > = {
+              totalCount?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              pageInfo?: Resolver<ResolversTypes[\\"PageInfo\\"], ParentType, ContextType>;
+              edges?: Resolver<Array<ResolversTypes[\\"UserEdge\\"]>, ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type Resolvers<ContextType = any> = {
+              Query?: QueryResolvers<ContextType>;
+              Mutation?: MutationResolvers<ContextType>;
+              CreateInfo?: CreateInfoResolvers<ContextType>;
+              CreateUsersMutationResponse?: CreateUsersMutationResponseResolvers<ContextType>;
+              DeleteInfo?: DeleteInfoResolvers<ContextType>;
+              PageInfo?: PageInfoResolvers<ContextType>;
+              StringAggregateSelection?: StringAggregateSelectionResolvers<ContextType>;
+              UpdateInfo?: UpdateInfoResolvers<ContextType>;
+              UpdateUsersMutationResponse?: UpdateUsersMutationResponseResolvers<ContextType>;
+              User?: UserResolvers<ContextType>;
+              UserAggregateSelection?: UserAggregateSelectionResolvers<ContextType>;
+              UserEdge?: UserEdgeResolvers<ContextType>;
+              UserFulltextResult?: UserFulltextResultResolvers<ContextType>;
+              UsersConnection?: UsersConnectionResolvers<ContextType>;
+            };
+
             export interface UserAggregateSelectionInput {
               count?: boolean;
               name?: boolean;
             }
+
+            export type UserSelectionSet = SelectionSetObject<User, UserResolvers>;
+            export type InferFromUserSelectionSet<TSelectionSet extends UserSelectionSet> =
+              InferFromSelectionSetObject<User, UserResolvers, TSelectionSet>;
 
             export declare class UserModel {
               public find(args?: {
@@ -595,6 +2220,15 @@ describe("generate", () => {
                 context?: any;
                 rootValue?: any;
               }): Promise<User[]>;
+              public findSafe<TSelectionSet extends UserSelectionSet>(args?: {
+                where?: UserWhere;
+                fulltext?: UserFulltext;
+                options?: UserOptions;
+                selectionSet?: TSelectionSet;
+                args?: any;
+                context?: any;
+                rootValue?: any;
+              }): Promise<Prettify<InferFromUserSelectionSet<TSelectionSet>>[]>;
               public create(args: {
                 input: UserCreateInput[];
                 selectionSet?: string | DocumentNode | SelectionSetNode;
@@ -664,6 +2298,434 @@ describe("generate", () => {
 
         expect(fileContent).toMatchInlineSnapshot(`
             "import type { SelectionSetNode, DocumentNode } from \\"graphql\\";
+            import type { RawGQL } from \\"@neo4j/graphql-ogm\\";
+            export type RequiredResolvers = Required<Resolvers>;
+            export type Primitive = string | number | boolean;
+            export type Prettify<T> = {
+              [K in keyof T]: T[K];
+            } & {};
+            export type AddRawGQL<T> = NonNullable<T> extends (infer TItem)[]
+              ? (TItem | RawGQL)[]
+              : NonNullable<T> extends Primitive
+              ? T
+              : IsAny<NonNullable<T>> extends true
+              ? T
+              : {
+                  [key in keyof T]: AddRawGQL<T[key]> | RawGQL;
+                };
+
+            export type AddRawGQLToOptions<TProps> = TProps extends { where?: infer TWhere }
+              ? {
+                  where?: AddRawGQL<NonNullable<TWhere>>;
+                } & AddRawGQLToOptions<Omit<TProps, \\"where\\">>
+              : TProps extends { sort?: infer TSort }
+              ? {
+                  sort?: NonNullable<TSort> extends (infer TItem)[]
+                    ? AddRawGQL<NonNullable<TItem>>[]
+                    : never;
+                }
+              : {};
+
+            export type ResolverArgs<
+              TModel extends object,
+              TKey extends keyof TModel,
+              TResolvers extends { [key: PropertyKey]: Resolver<any, any, any, any> }
+            > = TModel[TKey] extends Primitive
+              ? never
+              : NonNullable<TResolvers[TKey]> extends Resolver<any, any, any, infer Props>
+              ? \\"directed\\" extends keyof Props
+                ? Omit<Props, \\"directed\\" | \\"where\\" | \\"sort\\"> & {
+                    directed?: boolean;
+                  } & AddRawGQLToOptions<Props>
+                : {}
+              : {};
+
+            export type UnionToIntersection<U> = (
+              U extends any ? (k: U) => void : never
+            ) extends (k: infer I) => void
+              ? I
+              : never;
+            type LastOf<T> = UnionToIntersection<
+              T extends any ? () => T : never
+            > extends () => infer R
+              ? R
+              : never;
+
+            type Push<T extends any[], V> = [...T, V];
+
+            export type TuplifyUnion<
+              T,
+              L = LastOf<T>,
+              N = [T] extends [never] ? true : false
+            > = true extends N ? [] : Push<TuplifyUnion<Exclude<T, L>>, L>;
+
+            // This is pure magic
+            export type MagicArray<TArray extends any[]> =
+              NonNullable<TArray> extends (infer TItem)[] ? TItem[] : never;
+            export type MagicObject<TElement> =
+              NonNullable<TElement> extends (infer TItem)[]
+                ? TItem[]
+                : NonNullable<TElement> extends Primitive
+                ? TElement
+                : {
+                    [key in keyof TElement as TElement[key] extends never
+                      ? never
+                      : key]: MagicObject<TElement[key]>;
+                  };
+
+            export type StripNeverKeys<TElement> = TElement extends object
+              ? {
+                  [key in keyof TElement as [TElement[key]] extends [never]
+                    ? never
+                    : TElement[key] extends never[]
+                    ? never
+                    : key]: TElement[key];
+                }
+              : TElement;
+
+            export type ClearObjectWithNeverKeys<
+              TElement,
+              TStripped = StripNeverKeys<TElement>
+            > = [keyof Omit<TElement, keyof TStripped>] extends [never] ? TStripped : never;
+
+            export type StripNeverKeysAddTypename<
+              TElement,
+              TKey,
+              TStripped = ClearObjectWithNeverKeys<TElement>
+            > = [keyof TStripped] extends [never]
+              ? never
+              : TStripped & { __typename: TKey };
+
+            type RetrieveType<TItem> = Exclude<
+              TItem,
+              Promise<any>
+            > extends ResolverTypeWrapper<infer TValue>
+              ? TValue extends { __typename?: infer TName }
+                ? TItem extends object
+                  ? TName extends keyof Resolvers
+                    ? \\"__isTypeOf\\" extends keyof RequiredResolvers[TName]
+                      ? Omit<RequiredResolvers[TName], \\"__isTypeOf\\"> extends {
+                          [key: string]: Resolver<any, any, any, any>;
+                        }
+                        ? {
+                            Model: Exclude<TItem, Promise<any>>;
+                            Resolvers: Omit<RequiredResolvers[TName], \\"__isTypeOf\\">;
+                          }
+                        : never
+                      : never
+                    : never
+                  : never
+                : never
+              : never;
+
+            export type ResolverReturnType<
+              TModel extends object,
+              TKey extends keyof TModel,
+              TResolvers extends { [key: PropertyKey]: Resolver<any, any, any, any> }
+            > = TModel[TKey] extends Primitive
+              ? never
+              : NonNullable<TResolvers[TKey]> extends Resolver<infer Props, any, any, any>
+              ? Props extends (infer TItem)[]
+                ? RetrieveType<Exclude<TItem, Promise<any>>>
+                : RetrieveType<Exclude<Props, Promise<any>>>
+              : never;
+
+            export type ResolverObject = {
+              [key: PropertyKey]: Resolver<any, any, any> | Resolver<any, any, any, any>;
+            };
+
+            export type ResolveKey<
+              TModel extends object,
+              TResolvers extends ResolverObject,
+              TItem,
+              TKey,
+              TOmittedElement = TKey extends keyof TItem
+                ? Omit<
+                    NonNullable<TItem[TKey]>,
+                    \\"where\\" | \\"directed\\" | \\"options\\" | \\"after\\" | \\"first\\" | \\"sort\\"
+                  >
+                : never
+            > = TKey extends keyof TModel
+              ? NonNullable<TModel[TKey]> extends Primitive
+                ? TModel[TKey]
+                : ResolverReturnType<TModel, TKey, TResolvers> extends {
+                    Model: infer NestedTModel;
+                    Resolvers: infer NestedResolvers;
+                  }
+                ? NestedTModel extends object
+                  ? NestedResolvers extends ResolverObject
+                    ? TKey extends keyof TItem
+                      ? \\"on\\" extends keyof TOmittedElement
+                        ?
+                            | ({
+                                -readonly [key in keyof TOmittedElement[\\"on\\"]]: StripNeverKeysAddTypename<
+                                  {
+                                    -readonly [K in keyof TOmittedElement[\\"on\\"][key]]: K extends keyof NestedTModel
+                                      ? NestedTModel[K] extends any[]
+                                        ? MagicArray<
+                                            ResolveKey<
+                                              NestedTModel,
+                                              NestedResolvers,
+                                              TOmittedElement[\\"on\\"][key],
+                                              K
+                                            >[]
+                                          >
+                                        : ResolveKey<
+                                            NestedTModel,
+                                            NestedResolvers,
+                                            TOmittedElement[\\"on\\"][key],
+                                            K
+                                          >
+                                      : never;
+                                  },
+                                  key
+                                >;
+                              }[keyof TOmittedElement[\\"on\\"]] &
+                                ResolveKey<
+                                  TModel,
+                                  TResolvers,
+                                  Omit<TItem, TKey> & {
+                                    [key in TKey]: Omit<TOmittedElement, \\"on\\">;
+                                  },
+                                  TKey
+                                >)
+                            | (undefined extends TModel[TKey]
+                                ? NonNullable<TModel[TKey]> extends any[]
+                                  ? never
+                                  : undefined
+                                : never)
+                            | (undefined extends TItem[TKey]
+                                ? NonNullable<TModel[TKey]> extends any[]
+                                  ? never
+                                  : undefined
+                                : never)
+                        : ClearObjectWithNeverKeys<
+                            | {
+                                -readonly [key in keyof TOmittedElement as key extends keyof NestedTModel
+                                  ? key
+                                  : never]: key extends keyof NestedTModel
+                                  ? NestedTModel[key] extends any[]
+                                    ? MagicArray<
+                                        ResolveKey<
+                                          NestedTModel,
+                                          NestedResolvers,
+                                          TOmittedElement,
+                                          key
+                                        >[]
+                                      >
+                                    : ResolveKey<
+                                        NestedTModel,
+                                        NestedResolvers,
+                                        TOmittedElement,
+                                        key
+                                      >
+                                  : never;
+                              }
+                            | (undefined extends TModel[TKey]
+                                ? NonNullable<TModel[TKey]> extends any[]
+                                  ? never
+                                  : undefined
+                                : never)
+                            | (undefined extends TItem[TKey]
+                                ? NonNullable<TModel[TKey]> extends any[]
+                                  ? never
+                                  : undefined
+                                : never)
+                          >
+                      : never
+                    : never
+                  : TModel[TKey] extends (infer TArrayItem)[]
+                  ? NonNullable<TArrayItem> extends Primitive
+                    ? TArrayItem
+                    : never
+                  : never
+                : never
+              : never;
+
+            //Only if TValue = any, this is true
+            export type IsAny<TValue> = unknown extends TValue ? true : false;
+
+            export type NestedBooleanObject<
+              TModel extends object,
+              TResolvers extends ResolverObject,
+              TKey extends keyof TModel,
+              TElement,
+              RequiredValue extends NonNullable<TElement> = NonNullable<TElement>
+            > = IsAny<RequiredValue> extends true
+              ? boolean
+              : RequiredValue extends object
+              ? RequiredValue extends (infer TItem)[]
+                ? NonNullable<TItem> extends Primitive
+                  ? boolean
+                  : {
+                      [key in keyof TItem]?: ResolverReturnType<
+                        TModel,
+                        TKey,
+                        TResolvers
+                      > extends {
+                        Model: infer NestedModel;
+                        Resolvers: infer NestedResolvers;
+                      }
+                        ? NestedModel extends object
+                          ? NestedResolvers extends ResolverObject
+                            ? key extends keyof NestedModel
+                              ? NonNullable<TItem[key]> extends object
+                                ? NonNullable<TItem[key]> extends any[]
+                                  ? NestedBooleanObject<
+                                      NestedModel,
+                                      NestedResolvers,
+                                      key,
+                                      NonNullable<NonNullable<TItem>[key]>
+                                    >
+                                  : IsAny<NonNullable<TItem[key]>> extends true
+                                  ? boolean
+                                  : \\"__typename\\" extends keyof NonNullable<TItem[key]>
+                                  ? NestedBooleanObject<
+                                      NestedModel,
+                                      NestedResolvers,
+                                      key,
+                                      UnionToIntersection<
+                                        Omit<
+                                          NonNullable<NonNullable<TItem>[key]>,
+                                          \\"__typename\\"
+                                        >
+                                      > & {
+                                        __typename: NonNullable<
+                                          NonNullable<TItem[key]>[\\"__typename\\"]
+                                        >;
+                                      }
+                                    >
+                                  : never
+                                : boolean
+                              : never
+                            : never
+                          : never
+                        : never;
+                    } & ResolverArgs<TModel, TKey, TResolvers> &
+                      BooleanOn<TElement>
+                : {
+                    [key in keyof RequiredValue]?: ResolverReturnType<
+                      TModel,
+                      TKey,
+                      TResolvers
+                    > extends { Model: infer NestedModel; Resolvers: infer NestedResolvers }
+                      ? NestedModel extends object
+                        ? NestedResolvers extends ResolverObject
+                          ? key extends keyof NestedModel
+                            ? NonNullable<RequiredValue[key]> extends any[]
+                              ? NestedBooleanObject<
+                                  NestedModel,
+                                  NestedResolvers,
+                                  key,
+                                  NonNullable<RequiredValue[key]>
+                                >
+                              : NonNullable<RequiredValue[key]> extends object
+                              ? IsAny<NonNullable<RequiredValue[key]>> extends true
+                                ? boolean
+                                : \\"__typename\\" extends keyof NonNullable<RequiredValue[key]>
+                                ? NestedBooleanObject<
+                                    NestedModel,
+                                    NestedResolvers,
+                                    key,
+                                    UnionToIntersection<
+                                      Omit<NonNullable<RequiredValue[key]>, \\"__typename\\">
+                                    > & {
+                                      __typename: NonNullable<
+                                        NonNullable<RequiredValue[key]>[\\"__typename\\"]
+                                      >;
+                                    }
+                                  >
+                                : never
+                              : boolean
+                            : never
+                          : never
+                        : never
+                      : never;
+                  } & BooleanOn<TElement> &
+                    ResolverArgs<TModel, TKey, TResolvers>
+              : boolean;
+
+            export type SelectionSetObject<
+              TModel extends object,
+              TResolvers extends ResolverObject
+            > = {
+              [key in keyof TModel]?: NonNullable<TModel[key]> extends Primitive
+                ? boolean
+                : NonNullable<TModel[key]> extends (infer TItem)[]
+                ? \\"__typename\\" extends keyof TItem
+                  ? NestedBooleanObject<
+                      TModel,
+                      TResolvers,
+                      key,
+                      Prettify<
+                        UnionToIntersection<Omit<NonNullable<TItem>, \\"__typename\\">> & {
+                          __typename: NonNullable<NonNullable<TItem>[\\"__typename\\"]>;
+                        }
+                      >
+                    >
+                  : NonNullable<TItem> extends Primitive
+                  ? boolean
+                  : never
+                : \\"__typename\\" extends keyof NonNullable<TModel[key]>
+                ? NestedBooleanObject<
+                    TModel,
+                    TResolvers,
+                    key,
+                    Prettify<
+                      UnionToIntersection<Omit<NonNullable<TModel[key]>, \\"__typename\\">> & {
+                        __typename: NonNullable<NonNullable<TModel[key]>[\\"__typename\\"]>;
+                      }
+                    >
+                  >
+                : never;
+            };
+
+            type BooleanOn<TElement> = TElement extends { __typename: infer Typename }
+              ? TuplifyUnion<NonNullable<Typename>>[\\"length\\"] extends 1
+                ? {}
+                : NonNullable<Typename> extends string
+                ? {
+                    on?: {
+                      [key in NonNullable<Typename>]?: key extends keyof RequiredResolvers
+                        ? key extends keyof ResolversTypes
+                          ? Omit<
+                              RequiredResolvers[key],
+                              \\"__isTypeOf\\"
+                            > extends ResolverObject
+                            ? {
+                                [K in keyof NonNullable<
+                                  Exclude<ResolversTypes[key], Promise<any>>
+                                >]?: NestedBooleanObject<
+                                  NonNullable<Exclude<ResolversTypes[key], Promise<any>>>,
+                                  Omit<RequiredResolvers[key], \\"__isTypeOf\\">,
+                                  K,
+                                  NonNullable<Exclude<ResolversTypes[key], Promise<any>>>[K]
+                                >;
+                              }
+                            : never
+                          : never
+                        : never;
+                    };
+                  }
+                : never
+              : {};
+
+            export type InferFromSelectionSetObject<
+              TModel extends object,
+              TResolvers extends ResolverObject,
+              TSelectionSet extends SelectionSetObject<TModel, TResolvers>
+            > = MagicObject<{
+              -readonly [key in keyof TSelectionSet]: key extends keyof TModel
+                ? NonNullable<TModel[key]> extends any[]
+                  ?
+                      | ResolveKey<TModel, TResolvers, TSelectionSet, key>[]
+                      | (undefined extends TModel[key] ? undefined : never)
+                  :
+                      | ResolveKey<TModel, TResolvers, TSelectionSet, key>
+                      | (undefined extends TModel[key] ? undefined : never)
+                : never;
+            }>;
+            import { GraphQLResolveInfo } from \\"graphql\\";
             export type Maybe<T> = T | null;
             export type InputMaybe<T> = Maybe<T>;
             export type Exact<T extends { [key: string]: unknown }> = {
@@ -684,6 +2746,9 @@ describe("generate", () => {
               | {
                   [P in keyof T]?: P extends \\" $fragmentName\\" | \\"__typename\\" ? T[P] : never;
                 };
+            export type RequireFields<T, K extends keyof T> = Omit<T, K> & {
+              [P in K]-?: NonNullable<T[P]>;
+            };
             /** All built-in and custom scalars, mapped to their actual values */
             export type Scalars = {
               ID: { input: string; output: string };
@@ -868,10 +2933,372 @@ describe("generate", () => {
               NOT?: InputMaybe<UserWhere>;
             };
 
+            export type ResolverTypeWrapper<T> = Promise<T> | T;
+
+            export type ResolverWithResolve<TResult, TParent, TContext, TArgs> = {
+              resolve: ResolverFn<TResult, TParent, TContext, TArgs>;
+            };
+            export type Resolver<TResult, TParent = {}, TContext = {}, TArgs = {}> =
+              | ResolverFn<TResult, TParent, TContext, TArgs>
+              | ResolverWithResolve<TResult, TParent, TContext, TArgs>;
+
+            export type ResolverFn<TResult, TParent, TContext, TArgs> = (
+              parent: TParent,
+              args: TArgs,
+              context: TContext,
+              info: GraphQLResolveInfo
+            ) => Promise<TResult> | TResult;
+
+            export type SubscriptionSubscribeFn<TResult, TParent, TContext, TArgs> = (
+              parent: TParent,
+              args: TArgs,
+              context: TContext,
+              info: GraphQLResolveInfo
+            ) => AsyncIterable<TResult> | Promise<AsyncIterable<TResult>>;
+
+            export type SubscriptionResolveFn<TResult, TParent, TContext, TArgs> = (
+              parent: TParent,
+              args: TArgs,
+              context: TContext,
+              info: GraphQLResolveInfo
+            ) => TResult | Promise<TResult>;
+
+            export interface SubscriptionSubscriberObject<
+              TResult,
+              TKey extends string,
+              TParent,
+              TContext,
+              TArgs
+            > {
+              subscribe: SubscriptionSubscribeFn<
+                { [key in TKey]: TResult },
+                TParent,
+                TContext,
+                TArgs
+              >;
+              resolve?: SubscriptionResolveFn<
+                TResult,
+                { [key in TKey]: TResult },
+                TContext,
+                TArgs
+              >;
+            }
+
+            export interface SubscriptionResolverObject<TResult, TParent, TContext, TArgs> {
+              subscribe: SubscriptionSubscribeFn<any, TParent, TContext, TArgs>;
+              resolve: SubscriptionResolveFn<TResult, any, TContext, TArgs>;
+            }
+
+            export type SubscriptionObject<
+              TResult,
+              TKey extends string,
+              TParent,
+              TContext,
+              TArgs
+            > =
+              | SubscriptionSubscriberObject<TResult, TKey, TParent, TContext, TArgs>
+              | SubscriptionResolverObject<TResult, TParent, TContext, TArgs>;
+
+            export type SubscriptionResolver<
+              TResult,
+              TKey extends string,
+              TParent = {},
+              TContext = {},
+              TArgs = {}
+            > =
+              | ((
+                  ...args: any[]
+                ) => SubscriptionObject<TResult, TKey, TParent, TContext, TArgs>)
+              | SubscriptionObject<TResult, TKey, TParent, TContext, TArgs>;
+
+            export type TypeResolveFn<TTypes, TParent = {}, TContext = {}> = (
+              parent: TParent,
+              context: TContext,
+              info: GraphQLResolveInfo
+            ) => Maybe<TTypes> | Promise<Maybe<TTypes>>;
+
+            export type IsTypeOfResolverFn<T = {}, TContext = {}> = (
+              obj: T,
+              context: TContext,
+              info: GraphQLResolveInfo
+            ) => boolean | Promise<boolean>;
+
+            export type NextResolverFn<T> = () => Promise<T>;
+
+            export type DirectiveResolverFn<
+              TResult = {},
+              TParent = {},
+              TContext = {},
+              TArgs = {}
+            > = (
+              next: NextResolverFn<TResult>,
+              parent: TParent,
+              args: TArgs,
+              context: TContext,
+              info: GraphQLResolveInfo
+            ) => TResult | Promise<TResult>;
+
+            /** Mapping between all available schema types and the resolvers types */
+            export type ResolversTypes = {
+              Query: ResolverTypeWrapper<{}>;
+              Int: ResolverTypeWrapper<Scalars[\\"Int\\"][\\"output\\"]>;
+              String: ResolverTypeWrapper<Scalars[\\"String\\"][\\"output\\"]>;
+              Mutation: ResolverTypeWrapper<{}>;
+              SortDirection: SortDirection;
+              CreateInfo: ResolverTypeWrapper<CreateInfo>;
+              CreateUsersMutationResponse: ResolverTypeWrapper<CreateUsersMutationResponse>;
+              DeleteInfo: ResolverTypeWrapper<DeleteInfo>;
+              PageInfo: ResolverTypeWrapper<PageInfo>;
+              Boolean: ResolverTypeWrapper<Scalars[\\"Boolean\\"][\\"output\\"]>;
+              StringAggregateSelection: ResolverTypeWrapper<StringAggregateSelection>;
+              UpdateInfo: ResolverTypeWrapper<UpdateInfo>;
+              UpdateUsersMutationResponse: ResolverTypeWrapper<UpdateUsersMutationResponse>;
+              User: ResolverTypeWrapper<User>;
+              UserAggregateSelection: ResolverTypeWrapper<UserAggregateSelection>;
+              UserEdge: ResolverTypeWrapper<UserEdge>;
+              UsersConnection: ResolverTypeWrapper<UsersConnection>;
+              UserCreateInput: UserCreateInput;
+              UserOptions: UserOptions;
+              UserSort: UserSort;
+              UserUpdateInput: UserUpdateInput;
+              UserWhere: UserWhere;
+            };
+
+            /** Mapping between all available schema types and the resolvers parents */
+            export type ResolversParentTypes = {
+              Query: {};
+              Int: Scalars[\\"Int\\"][\\"output\\"];
+              String: Scalars[\\"String\\"][\\"output\\"];
+              Mutation: {};
+              CreateInfo: CreateInfo;
+              CreateUsersMutationResponse: CreateUsersMutationResponse;
+              DeleteInfo: DeleteInfo;
+              PageInfo: PageInfo;
+              Boolean: Scalars[\\"Boolean\\"][\\"output\\"];
+              StringAggregateSelection: StringAggregateSelection;
+              UpdateInfo: UpdateInfo;
+              UpdateUsersMutationResponse: UpdateUsersMutationResponse;
+              User: User;
+              UserAggregateSelection: UserAggregateSelection;
+              UserEdge: UserEdge;
+              UsersConnection: UsersConnection;
+              UserCreateInput: UserCreateInput;
+              UserOptions: UserOptions;
+              UserSort: UserSort;
+              UserUpdateInput: UserUpdateInput;
+              UserWhere: UserWhere;
+            };
+
+            export type QueryResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"Query\\"] = ResolversParentTypes[\\"Query\\"]
+            > = {
+              users?: Resolver<
+                Array<ResolversTypes[\\"User\\"]>,
+                ParentType,
+                ContextType,
+                Partial<QueryUsersArgs>
+              >;
+              usersConnection?: Resolver<
+                ResolversTypes[\\"UsersConnection\\"],
+                ParentType,
+                ContextType,
+                Partial<QueryUsersConnectionArgs>
+              >;
+              usersAggregate?: Resolver<
+                ResolversTypes[\\"UserAggregateSelection\\"],
+                ParentType,
+                ContextType,
+                Partial<QueryUsersAggregateArgs>
+              >;
+            };
+
+            export type MutationResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"Mutation\\"] = ResolversParentTypes[\\"Mutation\\"]
+            > = {
+              createUsers?: Resolver<
+                ResolversTypes[\\"CreateUsersMutationResponse\\"],
+                ParentType,
+                ContextType,
+                RequireFields<MutationCreateUsersArgs, \\"input\\">
+              >;
+              deleteUsers?: Resolver<
+                ResolversTypes[\\"DeleteInfo\\"],
+                ParentType,
+                ContextType,
+                Partial<MutationDeleteUsersArgs>
+              >;
+              updateUsers?: Resolver<
+                ResolversTypes[\\"UpdateUsersMutationResponse\\"],
+                ParentType,
+                ContextType,
+                Partial<MutationUpdateUsersArgs>
+              >;
+            };
+
+            export type CreateInfoResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"CreateInfo\\"] = ResolversParentTypes[\\"CreateInfo\\"]
+            > = {
+              bookmark?: Resolver<Maybe<ResolversTypes[\\"String\\"]>, ParentType, ContextType>;
+              nodesCreated?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              relationshipsCreated?: Resolver<
+                ResolversTypes[\\"Int\\"],
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type CreateUsersMutationResponseResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"CreateUsersMutationResponse\\"] = ResolversParentTypes[\\"CreateUsersMutationResponse\\"]
+            > = {
+              info?: Resolver<ResolversTypes[\\"CreateInfo\\"], ParentType, ContextType>;
+              users?: Resolver<Array<ResolversTypes[\\"User\\"]>, ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type DeleteInfoResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"DeleteInfo\\"] = ResolversParentTypes[\\"DeleteInfo\\"]
+            > = {
+              bookmark?: Resolver<Maybe<ResolversTypes[\\"String\\"]>, ParentType, ContextType>;
+              nodesDeleted?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              relationshipsDeleted?: Resolver<
+                ResolversTypes[\\"Int\\"],
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type PageInfoResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"PageInfo\\"] = ResolversParentTypes[\\"PageInfo\\"]
+            > = {
+              hasNextPage?: Resolver<ResolversTypes[\\"Boolean\\"], ParentType, ContextType>;
+              hasPreviousPage?: Resolver<
+                ResolversTypes[\\"Boolean\\"],
+                ParentType,
+                ContextType
+              >;
+              startCursor?: Resolver<
+                Maybe<ResolversTypes[\\"String\\"]>,
+                ParentType,
+                ContextType
+              >;
+              endCursor?: Resolver<
+                Maybe<ResolversTypes[\\"String\\"]>,
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type StringAggregateSelectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"StringAggregateSelection\\"] = ResolversParentTypes[\\"StringAggregateSelection\\"]
+            > = {
+              shortest?: Resolver<Maybe<ResolversTypes[\\"String\\"]>, ParentType, ContextType>;
+              longest?: Resolver<Maybe<ResolversTypes[\\"String\\"]>, ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type UpdateInfoResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"UpdateInfo\\"] = ResolversParentTypes[\\"UpdateInfo\\"]
+            > = {
+              bookmark?: Resolver<Maybe<ResolversTypes[\\"String\\"]>, ParentType, ContextType>;
+              nodesCreated?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              nodesDeleted?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              relationshipsCreated?: Resolver<
+                ResolversTypes[\\"Int\\"],
+                ParentType,
+                ContextType
+              >;
+              relationshipsDeleted?: Resolver<
+                ResolversTypes[\\"Int\\"],
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type UpdateUsersMutationResponseResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"UpdateUsersMutationResponse\\"] = ResolversParentTypes[\\"UpdateUsersMutationResponse\\"]
+            > = {
+              info?: Resolver<ResolversTypes[\\"UpdateInfo\\"], ParentType, ContextType>;
+              users?: Resolver<Array<ResolversTypes[\\"User\\"]>, ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type UserResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"User\\"] = ResolversParentTypes[\\"User\\"]
+            > = {
+              name?: Resolver<Maybe<ResolversTypes[\\"String\\"]>, ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type UserAggregateSelectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"UserAggregateSelection\\"] = ResolversParentTypes[\\"UserAggregateSelection\\"]
+            > = {
+              count?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              name?: Resolver<
+                ResolversTypes[\\"StringAggregateSelection\\"],
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type UserEdgeResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"UserEdge\\"] = ResolversParentTypes[\\"UserEdge\\"]
+            > = {
+              cursor?: Resolver<ResolversTypes[\\"String\\"], ParentType, ContextType>;
+              node?: Resolver<ResolversTypes[\\"User\\"], ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type UsersConnectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"UsersConnection\\"] = ResolversParentTypes[\\"UsersConnection\\"]
+            > = {
+              totalCount?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              pageInfo?: Resolver<ResolversTypes[\\"PageInfo\\"], ParentType, ContextType>;
+              edges?: Resolver<Array<ResolversTypes[\\"UserEdge\\"]>, ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type Resolvers<ContextType = any> = {
+              Query?: QueryResolvers<ContextType>;
+              Mutation?: MutationResolvers<ContextType>;
+              CreateInfo?: CreateInfoResolvers<ContextType>;
+              CreateUsersMutationResponse?: CreateUsersMutationResponseResolvers<ContextType>;
+              DeleteInfo?: DeleteInfoResolvers<ContextType>;
+              PageInfo?: PageInfoResolvers<ContextType>;
+              StringAggregateSelection?: StringAggregateSelectionResolvers<ContextType>;
+              UpdateInfo?: UpdateInfoResolvers<ContextType>;
+              UpdateUsersMutationResponse?: UpdateUsersMutationResponseResolvers<ContextType>;
+              User?: UserResolvers<ContextType>;
+              UserAggregateSelection?: UserAggregateSelectionResolvers<ContextType>;
+              UserEdge?: UserEdgeResolvers<ContextType>;
+              UsersConnection?: UsersConnectionResolvers<ContextType>;
+            };
+
             export interface UserAggregateSelectionInput {
               count?: boolean;
               name?: boolean;
             }
+
+            export type UserSelectionSet = SelectionSetObject<User, UserResolvers>;
+            export type InferFromUserSelectionSet<TSelectionSet extends UserSelectionSet> =
+              InferFromSelectionSetObject<User, UserResolvers, TSelectionSet>;
 
             export declare class UserModel {
               public find(args?: {
@@ -883,6 +3310,15 @@ describe("generate", () => {
                 context?: any;
                 rootValue?: any;
               }): Promise<User[]>;
+              public findSafe<TSelectionSet extends UserSelectionSet>(args?: {
+                where?: UserWhere;
+
+                options?: UserOptions;
+                selectionSet?: TSelectionSet;
+                args?: any;
+                context?: any;
+                rootValue?: any;
+              }): Promise<Prettify<InferFromUserSelectionSet<TSelectionSet>>[]>;
               public create(args: {
                 input: UserCreateInput[];
                 selectionSet?: string | DocumentNode | SelectionSetNode;
@@ -948,6 +3384,434 @@ describe("generate", () => {
 
         expect(generated).toMatchInlineSnapshot(`
             "import type { SelectionSetNode, DocumentNode } from \\"graphql\\";
+            import type { RawGQL } from \\"@neo4j/graphql-ogm\\";
+            export type RequiredResolvers = Required<Resolvers>;
+            export type Primitive = string | number | boolean;
+            export type Prettify<T> = {
+              [K in keyof T]: T[K];
+            } & {};
+            export type AddRawGQL<T> = NonNullable<T> extends (infer TItem)[]
+              ? (TItem | RawGQL)[]
+              : NonNullable<T> extends Primitive
+              ? T
+              : IsAny<NonNullable<T>> extends true
+              ? T
+              : {
+                  [key in keyof T]: AddRawGQL<T[key]> | RawGQL;
+                };
+
+            export type AddRawGQLToOptions<TProps> = TProps extends { where?: infer TWhere }
+              ? {
+                  where?: AddRawGQL<NonNullable<TWhere>>;
+                } & AddRawGQLToOptions<Omit<TProps, \\"where\\">>
+              : TProps extends { sort?: infer TSort }
+              ? {
+                  sort?: NonNullable<TSort> extends (infer TItem)[]
+                    ? AddRawGQL<NonNullable<TItem>>[]
+                    : never;
+                }
+              : {};
+
+            export type ResolverArgs<
+              TModel extends object,
+              TKey extends keyof TModel,
+              TResolvers extends { [key: PropertyKey]: Resolver<any, any, any, any> }
+            > = TModel[TKey] extends Primitive
+              ? never
+              : NonNullable<TResolvers[TKey]> extends Resolver<any, any, any, infer Props>
+              ? \\"directed\\" extends keyof Props
+                ? Omit<Props, \\"directed\\" | \\"where\\" | \\"sort\\"> & {
+                    directed?: boolean;
+                  } & AddRawGQLToOptions<Props>
+                : {}
+              : {};
+
+            export type UnionToIntersection<U> = (
+              U extends any ? (k: U) => void : never
+            ) extends (k: infer I) => void
+              ? I
+              : never;
+            type LastOf<T> = UnionToIntersection<
+              T extends any ? () => T : never
+            > extends () => infer R
+              ? R
+              : never;
+
+            type Push<T extends any[], V> = [...T, V];
+
+            export type TuplifyUnion<
+              T,
+              L = LastOf<T>,
+              N = [T] extends [never] ? true : false
+            > = true extends N ? [] : Push<TuplifyUnion<Exclude<T, L>>, L>;
+
+            // This is pure magic
+            export type MagicArray<TArray extends any[]> =
+              NonNullable<TArray> extends (infer TItem)[] ? TItem[] : never;
+            export type MagicObject<TElement> =
+              NonNullable<TElement> extends (infer TItem)[]
+                ? TItem[]
+                : NonNullable<TElement> extends Primitive
+                ? TElement
+                : {
+                    [key in keyof TElement as TElement[key] extends never
+                      ? never
+                      : key]: MagicObject<TElement[key]>;
+                  };
+
+            export type StripNeverKeys<TElement> = TElement extends object
+              ? {
+                  [key in keyof TElement as [TElement[key]] extends [never]
+                    ? never
+                    : TElement[key] extends never[]
+                    ? never
+                    : key]: TElement[key];
+                }
+              : TElement;
+
+            export type ClearObjectWithNeverKeys<
+              TElement,
+              TStripped = StripNeverKeys<TElement>
+            > = [keyof Omit<TElement, keyof TStripped>] extends [never] ? TStripped : never;
+
+            export type StripNeverKeysAddTypename<
+              TElement,
+              TKey,
+              TStripped = ClearObjectWithNeverKeys<TElement>
+            > = [keyof TStripped] extends [never]
+              ? never
+              : TStripped & { __typename: TKey };
+
+            type RetrieveType<TItem> = Exclude<
+              TItem,
+              Promise<any>
+            > extends ResolverTypeWrapper<infer TValue>
+              ? TValue extends { __typename?: infer TName }
+                ? TItem extends object
+                  ? TName extends keyof Resolvers
+                    ? \\"__isTypeOf\\" extends keyof RequiredResolvers[TName]
+                      ? Omit<RequiredResolvers[TName], \\"__isTypeOf\\"> extends {
+                          [key: string]: Resolver<any, any, any, any>;
+                        }
+                        ? {
+                            Model: Exclude<TItem, Promise<any>>;
+                            Resolvers: Omit<RequiredResolvers[TName], \\"__isTypeOf\\">;
+                          }
+                        : never
+                      : never
+                    : never
+                  : never
+                : never
+              : never;
+
+            export type ResolverReturnType<
+              TModel extends object,
+              TKey extends keyof TModel,
+              TResolvers extends { [key: PropertyKey]: Resolver<any, any, any, any> }
+            > = TModel[TKey] extends Primitive
+              ? never
+              : NonNullable<TResolvers[TKey]> extends Resolver<infer Props, any, any, any>
+              ? Props extends (infer TItem)[]
+                ? RetrieveType<Exclude<TItem, Promise<any>>>
+                : RetrieveType<Exclude<Props, Promise<any>>>
+              : never;
+
+            export type ResolverObject = {
+              [key: PropertyKey]: Resolver<any, any, any> | Resolver<any, any, any, any>;
+            };
+
+            export type ResolveKey<
+              TModel extends object,
+              TResolvers extends ResolverObject,
+              TItem,
+              TKey,
+              TOmittedElement = TKey extends keyof TItem
+                ? Omit<
+                    NonNullable<TItem[TKey]>,
+                    \\"where\\" | \\"directed\\" | \\"options\\" | \\"after\\" | \\"first\\" | \\"sort\\"
+                  >
+                : never
+            > = TKey extends keyof TModel
+              ? NonNullable<TModel[TKey]> extends Primitive
+                ? TModel[TKey]
+                : ResolverReturnType<TModel, TKey, TResolvers> extends {
+                    Model: infer NestedTModel;
+                    Resolvers: infer NestedResolvers;
+                  }
+                ? NestedTModel extends object
+                  ? NestedResolvers extends ResolverObject
+                    ? TKey extends keyof TItem
+                      ? \\"on\\" extends keyof TOmittedElement
+                        ?
+                            | ({
+                                -readonly [key in keyof TOmittedElement[\\"on\\"]]: StripNeverKeysAddTypename<
+                                  {
+                                    -readonly [K in keyof TOmittedElement[\\"on\\"][key]]: K extends keyof NestedTModel
+                                      ? NestedTModel[K] extends any[]
+                                        ? MagicArray<
+                                            ResolveKey<
+                                              NestedTModel,
+                                              NestedResolvers,
+                                              TOmittedElement[\\"on\\"][key],
+                                              K
+                                            >[]
+                                          >
+                                        : ResolveKey<
+                                            NestedTModel,
+                                            NestedResolvers,
+                                            TOmittedElement[\\"on\\"][key],
+                                            K
+                                          >
+                                      : never;
+                                  },
+                                  key
+                                >;
+                              }[keyof TOmittedElement[\\"on\\"]] &
+                                ResolveKey<
+                                  TModel,
+                                  TResolvers,
+                                  Omit<TItem, TKey> & {
+                                    [key in TKey]: Omit<TOmittedElement, \\"on\\">;
+                                  },
+                                  TKey
+                                >)
+                            | (undefined extends TModel[TKey]
+                                ? NonNullable<TModel[TKey]> extends any[]
+                                  ? never
+                                  : undefined
+                                : never)
+                            | (undefined extends TItem[TKey]
+                                ? NonNullable<TModel[TKey]> extends any[]
+                                  ? never
+                                  : undefined
+                                : never)
+                        : ClearObjectWithNeverKeys<
+                            | {
+                                -readonly [key in keyof TOmittedElement as key extends keyof NestedTModel
+                                  ? key
+                                  : never]: key extends keyof NestedTModel
+                                  ? NestedTModel[key] extends any[]
+                                    ? MagicArray<
+                                        ResolveKey<
+                                          NestedTModel,
+                                          NestedResolvers,
+                                          TOmittedElement,
+                                          key
+                                        >[]
+                                      >
+                                    : ResolveKey<
+                                        NestedTModel,
+                                        NestedResolvers,
+                                        TOmittedElement,
+                                        key
+                                      >
+                                  : never;
+                              }
+                            | (undefined extends TModel[TKey]
+                                ? NonNullable<TModel[TKey]> extends any[]
+                                  ? never
+                                  : undefined
+                                : never)
+                            | (undefined extends TItem[TKey]
+                                ? NonNullable<TModel[TKey]> extends any[]
+                                  ? never
+                                  : undefined
+                                : never)
+                          >
+                      : never
+                    : never
+                  : TModel[TKey] extends (infer TArrayItem)[]
+                  ? NonNullable<TArrayItem> extends Primitive
+                    ? TArrayItem
+                    : never
+                  : never
+                : never
+              : never;
+
+            //Only if TValue = any, this is true
+            export type IsAny<TValue> = unknown extends TValue ? true : false;
+
+            export type NestedBooleanObject<
+              TModel extends object,
+              TResolvers extends ResolverObject,
+              TKey extends keyof TModel,
+              TElement,
+              RequiredValue extends NonNullable<TElement> = NonNullable<TElement>
+            > = IsAny<RequiredValue> extends true
+              ? boolean
+              : RequiredValue extends object
+              ? RequiredValue extends (infer TItem)[]
+                ? NonNullable<TItem> extends Primitive
+                  ? boolean
+                  : {
+                      [key in keyof TItem]?: ResolverReturnType<
+                        TModel,
+                        TKey,
+                        TResolvers
+                      > extends {
+                        Model: infer NestedModel;
+                        Resolvers: infer NestedResolvers;
+                      }
+                        ? NestedModel extends object
+                          ? NestedResolvers extends ResolverObject
+                            ? key extends keyof NestedModel
+                              ? NonNullable<TItem[key]> extends object
+                                ? NonNullable<TItem[key]> extends any[]
+                                  ? NestedBooleanObject<
+                                      NestedModel,
+                                      NestedResolvers,
+                                      key,
+                                      NonNullable<NonNullable<TItem>[key]>
+                                    >
+                                  : IsAny<NonNullable<TItem[key]>> extends true
+                                  ? boolean
+                                  : \\"__typename\\" extends keyof NonNullable<TItem[key]>
+                                  ? NestedBooleanObject<
+                                      NestedModel,
+                                      NestedResolvers,
+                                      key,
+                                      UnionToIntersection<
+                                        Omit<
+                                          NonNullable<NonNullable<TItem>[key]>,
+                                          \\"__typename\\"
+                                        >
+                                      > & {
+                                        __typename: NonNullable<
+                                          NonNullable<TItem[key]>[\\"__typename\\"]
+                                        >;
+                                      }
+                                    >
+                                  : never
+                                : boolean
+                              : never
+                            : never
+                          : never
+                        : never;
+                    } & ResolverArgs<TModel, TKey, TResolvers> &
+                      BooleanOn<TElement>
+                : {
+                    [key in keyof RequiredValue]?: ResolverReturnType<
+                      TModel,
+                      TKey,
+                      TResolvers
+                    > extends { Model: infer NestedModel; Resolvers: infer NestedResolvers }
+                      ? NestedModel extends object
+                        ? NestedResolvers extends ResolverObject
+                          ? key extends keyof NestedModel
+                            ? NonNullable<RequiredValue[key]> extends any[]
+                              ? NestedBooleanObject<
+                                  NestedModel,
+                                  NestedResolvers,
+                                  key,
+                                  NonNullable<RequiredValue[key]>
+                                >
+                              : NonNullable<RequiredValue[key]> extends object
+                              ? IsAny<NonNullable<RequiredValue[key]>> extends true
+                                ? boolean
+                                : \\"__typename\\" extends keyof NonNullable<RequiredValue[key]>
+                                ? NestedBooleanObject<
+                                    NestedModel,
+                                    NestedResolvers,
+                                    key,
+                                    UnionToIntersection<
+                                      Omit<NonNullable<RequiredValue[key]>, \\"__typename\\">
+                                    > & {
+                                      __typename: NonNullable<
+                                        NonNullable<RequiredValue[key]>[\\"__typename\\"]
+                                      >;
+                                    }
+                                  >
+                                : never
+                              : boolean
+                            : never
+                          : never
+                        : never
+                      : never;
+                  } & BooleanOn<TElement> &
+                    ResolverArgs<TModel, TKey, TResolvers>
+              : boolean;
+
+            export type SelectionSetObject<
+              TModel extends object,
+              TResolvers extends ResolverObject
+            > = {
+              [key in keyof TModel]?: NonNullable<TModel[key]> extends Primitive
+                ? boolean
+                : NonNullable<TModel[key]> extends (infer TItem)[]
+                ? \\"__typename\\" extends keyof TItem
+                  ? NestedBooleanObject<
+                      TModel,
+                      TResolvers,
+                      key,
+                      Prettify<
+                        UnionToIntersection<Omit<NonNullable<TItem>, \\"__typename\\">> & {
+                          __typename: NonNullable<NonNullable<TItem>[\\"__typename\\"]>;
+                        }
+                      >
+                    >
+                  : NonNullable<TItem> extends Primitive
+                  ? boolean
+                  : never
+                : \\"__typename\\" extends keyof NonNullable<TModel[key]>
+                ? NestedBooleanObject<
+                    TModel,
+                    TResolvers,
+                    key,
+                    Prettify<
+                      UnionToIntersection<Omit<NonNullable<TModel[key]>, \\"__typename\\">> & {
+                        __typename: NonNullable<NonNullable<TModel[key]>[\\"__typename\\"]>;
+                      }
+                    >
+                  >
+                : never;
+            };
+
+            type BooleanOn<TElement> = TElement extends { __typename: infer Typename }
+              ? TuplifyUnion<NonNullable<Typename>>[\\"length\\"] extends 1
+                ? {}
+                : NonNullable<Typename> extends string
+                ? {
+                    on?: {
+                      [key in NonNullable<Typename>]?: key extends keyof RequiredResolvers
+                        ? key extends keyof ResolversTypes
+                          ? Omit<
+                              RequiredResolvers[key],
+                              \\"__isTypeOf\\"
+                            > extends ResolverObject
+                            ? {
+                                [K in keyof NonNullable<
+                                  Exclude<ResolversTypes[key], Promise<any>>
+                                >]?: NestedBooleanObject<
+                                  NonNullable<Exclude<ResolversTypes[key], Promise<any>>>,
+                                  Omit<RequiredResolvers[key], \\"__isTypeOf\\">,
+                                  K,
+                                  NonNullable<Exclude<ResolversTypes[key], Promise<any>>>[K]
+                                >;
+                              }
+                            : never
+                          : never
+                        : never;
+                    };
+                  }
+                : never
+              : {};
+
+            export type InferFromSelectionSetObject<
+              TModel extends object,
+              TResolvers extends ResolverObject,
+              TSelectionSet extends SelectionSetObject<TModel, TResolvers>
+            > = MagicObject<{
+              -readonly [key in keyof TSelectionSet]: key extends keyof TModel
+                ? NonNullable<TModel[key]> extends any[]
+                  ?
+                      | ResolveKey<TModel, TResolvers, TSelectionSet, key>[]
+                      | (undefined extends TModel[key] ? undefined : never)
+                  :
+                      | ResolveKey<TModel, TResolvers, TSelectionSet, key>
+                      | (undefined extends TModel[key] ? undefined : never)
+                : never;
+            }>;
+            import { GraphQLResolveInfo } from \\"graphql\\";
             export type Maybe<T> = T | null;
             export type InputMaybe<T> = Maybe<T>;
             export type Exact<T extends { [key: string]: unknown }> = {
@@ -968,6 +3832,9 @@ describe("generate", () => {
               | {
                   [P in keyof T]?: P extends \\" $fragmentName\\" | \\"__typename\\" ? T[P] : never;
                 };
+            export type RequireFields<T, K extends keyof T> = Omit<T, K> & {
+              [P in K]-?: NonNullable<T[P]>;
+            };
             /** All built-in and custom scalars, mapped to their actual values */
             export type Scalars = {
               ID: { input: string; output: string };
@@ -1583,10 +4450,667 @@ describe("generate", () => {
               NOT?: InputMaybe<PersonWhere>;
             };
 
+            export type ResolverTypeWrapper<T> = Promise<T> | T;
+
+            export type ResolverWithResolve<TResult, TParent, TContext, TArgs> = {
+              resolve: ResolverFn<TResult, TParent, TContext, TArgs>;
+            };
+            export type Resolver<TResult, TParent = {}, TContext = {}, TArgs = {}> =
+              | ResolverFn<TResult, TParent, TContext, TArgs>
+              | ResolverWithResolve<TResult, TParent, TContext, TArgs>;
+
+            export type ResolverFn<TResult, TParent, TContext, TArgs> = (
+              parent: TParent,
+              args: TArgs,
+              context: TContext,
+              info: GraphQLResolveInfo
+            ) => Promise<TResult> | TResult;
+
+            export type SubscriptionSubscribeFn<TResult, TParent, TContext, TArgs> = (
+              parent: TParent,
+              args: TArgs,
+              context: TContext,
+              info: GraphQLResolveInfo
+            ) => AsyncIterable<TResult> | Promise<AsyncIterable<TResult>>;
+
+            export type SubscriptionResolveFn<TResult, TParent, TContext, TArgs> = (
+              parent: TParent,
+              args: TArgs,
+              context: TContext,
+              info: GraphQLResolveInfo
+            ) => TResult | Promise<TResult>;
+
+            export interface SubscriptionSubscriberObject<
+              TResult,
+              TKey extends string,
+              TParent,
+              TContext,
+              TArgs
+            > {
+              subscribe: SubscriptionSubscribeFn<
+                { [key in TKey]: TResult },
+                TParent,
+                TContext,
+                TArgs
+              >;
+              resolve?: SubscriptionResolveFn<
+                TResult,
+                { [key in TKey]: TResult },
+                TContext,
+                TArgs
+              >;
+            }
+
+            export interface SubscriptionResolverObject<TResult, TParent, TContext, TArgs> {
+              subscribe: SubscriptionSubscribeFn<any, TParent, TContext, TArgs>;
+              resolve: SubscriptionResolveFn<TResult, any, TContext, TArgs>;
+            }
+
+            export type SubscriptionObject<
+              TResult,
+              TKey extends string,
+              TParent,
+              TContext,
+              TArgs
+            > =
+              | SubscriptionSubscriberObject<TResult, TKey, TParent, TContext, TArgs>
+              | SubscriptionResolverObject<TResult, TParent, TContext, TArgs>;
+
+            export type SubscriptionResolver<
+              TResult,
+              TKey extends string,
+              TParent = {},
+              TContext = {},
+              TArgs = {}
+            > =
+              | ((
+                  ...args: any[]
+                ) => SubscriptionObject<TResult, TKey, TParent, TContext, TArgs>)
+              | SubscriptionObject<TResult, TKey, TParent, TContext, TArgs>;
+
+            export type TypeResolveFn<TTypes, TParent = {}, TContext = {}> = (
+              parent: TParent,
+              context: TContext,
+              info: GraphQLResolveInfo
+            ) => Maybe<TTypes> | Promise<Maybe<TTypes>>;
+
+            export type IsTypeOfResolverFn<T = {}, TContext = {}> = (
+              obj: T,
+              context: TContext,
+              info: GraphQLResolveInfo
+            ) => boolean | Promise<boolean>;
+
+            export type NextResolverFn<T> = () => Promise<T>;
+
+            export type DirectiveResolverFn<
+              TResult = {},
+              TParent = {},
+              TContext = {},
+              TArgs = {}
+            > = (
+              next: NextResolverFn<TResult>,
+              parent: TParent,
+              args: TArgs,
+              context: TContext,
+              info: GraphQLResolveInfo
+            ) => TResult | Promise<TResult>;
+
+            /** Mapping between all available schema types and the resolvers types */
+            export type ResolversTypes = {
+              Query: ResolverTypeWrapper<{}>;
+              Int: ResolverTypeWrapper<Scalars[\\"Int\\"][\\"output\\"]>;
+              String: ResolverTypeWrapper<Scalars[\\"String\\"][\\"output\\"]>;
+              Mutation: ResolverTypeWrapper<{}>;
+              SortDirection: SortDirection;
+              ActedIn: ResolverTypeWrapper<ActedIn>;
+              CreateInfo: ResolverTypeWrapper<CreateInfo>;
+              CreateMoviesMutationResponse: ResolverTypeWrapper<CreateMoviesMutationResponse>;
+              CreatePeopleMutationResponse: ResolverTypeWrapper<CreatePeopleMutationResponse>;
+              DeleteInfo: ResolverTypeWrapper<DeleteInfo>;
+              IntAggregateSelection: ResolverTypeWrapper<IntAggregateSelection>;
+              Float: ResolverTypeWrapper<Scalars[\\"Float\\"][\\"output\\"]>;
+              Movie: ResolverTypeWrapper<Movie>;
+              Boolean: ResolverTypeWrapper<Scalars[\\"Boolean\\"][\\"output\\"]>;
+              MovieActorsConnection: ResolverTypeWrapper<MovieActorsConnection>;
+              MovieActorsRelationship: ResolverTypeWrapper<MovieActorsRelationship>;
+              MovieAggregateSelection: ResolverTypeWrapper<MovieAggregateSelection>;
+              MovieEdge: ResolverTypeWrapper<MovieEdge>;
+              MoviePersonActorsAggregationSelection: ResolverTypeWrapper<MoviePersonActorsAggregationSelection>;
+              MoviePersonActorsEdgeAggregateSelection: ResolverTypeWrapper<MoviePersonActorsEdgeAggregateSelection>;
+              MoviePersonActorsNodeAggregateSelection: ResolverTypeWrapper<MoviePersonActorsNodeAggregateSelection>;
+              MoviesConnection: ResolverTypeWrapper<MoviesConnection>;
+              PageInfo: ResolverTypeWrapper<PageInfo>;
+              PeopleConnection: ResolverTypeWrapper<PeopleConnection>;
+              Person: ResolverTypeWrapper<Person>;
+              PersonAggregateSelection: ResolverTypeWrapper<PersonAggregateSelection>;
+              PersonEdge: ResolverTypeWrapper<PersonEdge>;
+              StringAggregateSelection: ResolverTypeWrapper<StringAggregateSelection>;
+              UpdateInfo: ResolverTypeWrapper<UpdateInfo>;
+              UpdateMoviesMutationResponse: ResolverTypeWrapper<UpdateMoviesMutationResponse>;
+              UpdatePeopleMutationResponse: ResolverTypeWrapper<UpdatePeopleMutationResponse>;
+              ActedInAggregationWhereInput: ActedInAggregationWhereInput;
+              ActedInCreateInput: ActedInCreateInput;
+              ActedInSort: ActedInSort;
+              ActedInUpdateInput: ActedInUpdateInput;
+              ActedInWhere: ActedInWhere;
+              MovieActorsAggregateInput: MovieActorsAggregateInput;
+              MovieActorsConnectFieldInput: MovieActorsConnectFieldInput;
+              MovieActorsConnectionSort: MovieActorsConnectionSort;
+              MovieActorsConnectionWhere: MovieActorsConnectionWhere;
+              MovieActorsCreateFieldInput: MovieActorsCreateFieldInput;
+              MovieActorsDeleteFieldInput: MovieActorsDeleteFieldInput;
+              MovieActorsDisconnectFieldInput: MovieActorsDisconnectFieldInput;
+              MovieActorsFieldInput: MovieActorsFieldInput;
+              MovieActorsNodeAggregationWhereInput: MovieActorsNodeAggregationWhereInput;
+              MovieActorsUpdateConnectionInput: MovieActorsUpdateConnectionInput;
+              MovieActorsUpdateFieldInput: MovieActorsUpdateFieldInput;
+              MovieConnectInput: MovieConnectInput;
+              MovieCreateInput: MovieCreateInput;
+              MovieDeleteInput: MovieDeleteInput;
+              MovieDisconnectInput: MovieDisconnectInput;
+              MovieOptions: MovieOptions;
+              MovieRelationInput: MovieRelationInput;
+              MovieSort: MovieSort;
+              MovieUpdateInput: MovieUpdateInput;
+              MovieWhere: MovieWhere;
+              PersonConnectWhere: PersonConnectWhere;
+              PersonCreateInput: PersonCreateInput;
+              PersonOptions: PersonOptions;
+              PersonSort: PersonSort;
+              PersonUpdateInput: PersonUpdateInput;
+              PersonWhere: PersonWhere;
+            };
+
+            /** Mapping between all available schema types and the resolvers parents */
+            export type ResolversParentTypes = {
+              Query: {};
+              Int: Scalars[\\"Int\\"][\\"output\\"];
+              String: Scalars[\\"String\\"][\\"output\\"];
+              Mutation: {};
+              ActedIn: ActedIn;
+              CreateInfo: CreateInfo;
+              CreateMoviesMutationResponse: CreateMoviesMutationResponse;
+              CreatePeopleMutationResponse: CreatePeopleMutationResponse;
+              DeleteInfo: DeleteInfo;
+              IntAggregateSelection: IntAggregateSelection;
+              Float: Scalars[\\"Float\\"][\\"output\\"];
+              Movie: Movie;
+              Boolean: Scalars[\\"Boolean\\"][\\"output\\"];
+              MovieActorsConnection: MovieActorsConnection;
+              MovieActorsRelationship: MovieActorsRelationship;
+              MovieAggregateSelection: MovieAggregateSelection;
+              MovieEdge: MovieEdge;
+              MoviePersonActorsAggregationSelection: MoviePersonActorsAggregationSelection;
+              MoviePersonActorsEdgeAggregateSelection: MoviePersonActorsEdgeAggregateSelection;
+              MoviePersonActorsNodeAggregateSelection: MoviePersonActorsNodeAggregateSelection;
+              MoviesConnection: MoviesConnection;
+              PageInfo: PageInfo;
+              PeopleConnection: PeopleConnection;
+              Person: Person;
+              PersonAggregateSelection: PersonAggregateSelection;
+              PersonEdge: PersonEdge;
+              StringAggregateSelection: StringAggregateSelection;
+              UpdateInfo: UpdateInfo;
+              UpdateMoviesMutationResponse: UpdateMoviesMutationResponse;
+              UpdatePeopleMutationResponse: UpdatePeopleMutationResponse;
+              ActedInAggregationWhereInput: ActedInAggregationWhereInput;
+              ActedInCreateInput: ActedInCreateInput;
+              ActedInSort: ActedInSort;
+              ActedInUpdateInput: ActedInUpdateInput;
+              ActedInWhere: ActedInWhere;
+              MovieActorsAggregateInput: MovieActorsAggregateInput;
+              MovieActorsConnectFieldInput: MovieActorsConnectFieldInput;
+              MovieActorsConnectionSort: MovieActorsConnectionSort;
+              MovieActorsConnectionWhere: MovieActorsConnectionWhere;
+              MovieActorsCreateFieldInput: MovieActorsCreateFieldInput;
+              MovieActorsDeleteFieldInput: MovieActorsDeleteFieldInput;
+              MovieActorsDisconnectFieldInput: MovieActorsDisconnectFieldInput;
+              MovieActorsFieldInput: MovieActorsFieldInput;
+              MovieActorsNodeAggregationWhereInput: MovieActorsNodeAggregationWhereInput;
+              MovieActorsUpdateConnectionInput: MovieActorsUpdateConnectionInput;
+              MovieActorsUpdateFieldInput: MovieActorsUpdateFieldInput;
+              MovieConnectInput: MovieConnectInput;
+              MovieCreateInput: MovieCreateInput;
+              MovieDeleteInput: MovieDeleteInput;
+              MovieDisconnectInput: MovieDisconnectInput;
+              MovieOptions: MovieOptions;
+              MovieRelationInput: MovieRelationInput;
+              MovieSort: MovieSort;
+              MovieUpdateInput: MovieUpdateInput;
+              MovieWhere: MovieWhere;
+              PersonConnectWhere: PersonConnectWhere;
+              PersonCreateInput: PersonCreateInput;
+              PersonOptions: PersonOptions;
+              PersonSort: PersonSort;
+              PersonUpdateInput: PersonUpdateInput;
+              PersonWhere: PersonWhere;
+            };
+
+            export type QueryResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"Query\\"] = ResolversParentTypes[\\"Query\\"]
+            > = {
+              movies?: Resolver<
+                Array<ResolversTypes[\\"Movie\\"]>,
+                ParentType,
+                ContextType,
+                Partial<QueryMoviesArgs>
+              >;
+              moviesConnection?: Resolver<
+                ResolversTypes[\\"MoviesConnection\\"],
+                ParentType,
+                ContextType,
+                Partial<QueryMoviesConnectionArgs>
+              >;
+              moviesAggregate?: Resolver<
+                ResolversTypes[\\"MovieAggregateSelection\\"],
+                ParentType,
+                ContextType,
+                Partial<QueryMoviesAggregateArgs>
+              >;
+              people?: Resolver<
+                Array<ResolversTypes[\\"Person\\"]>,
+                ParentType,
+                ContextType,
+                Partial<QueryPeopleArgs>
+              >;
+              peopleConnection?: Resolver<
+                ResolversTypes[\\"PeopleConnection\\"],
+                ParentType,
+                ContextType,
+                Partial<QueryPeopleConnectionArgs>
+              >;
+              peopleAggregate?: Resolver<
+                ResolversTypes[\\"PersonAggregateSelection\\"],
+                ParentType,
+                ContextType,
+                Partial<QueryPeopleAggregateArgs>
+              >;
+            };
+
+            export type MutationResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"Mutation\\"] = ResolversParentTypes[\\"Mutation\\"]
+            > = {
+              createMovies?: Resolver<
+                ResolversTypes[\\"CreateMoviesMutationResponse\\"],
+                ParentType,
+                ContextType,
+                RequireFields<MutationCreateMoviesArgs, \\"input\\">
+              >;
+              deleteMovies?: Resolver<
+                ResolversTypes[\\"DeleteInfo\\"],
+                ParentType,
+                ContextType,
+                Partial<MutationDeleteMoviesArgs>
+              >;
+              updateMovies?: Resolver<
+                ResolversTypes[\\"UpdateMoviesMutationResponse\\"],
+                ParentType,
+                ContextType,
+                Partial<MutationUpdateMoviesArgs>
+              >;
+              createPeople?: Resolver<
+                ResolversTypes[\\"CreatePeopleMutationResponse\\"],
+                ParentType,
+                ContextType,
+                RequireFields<MutationCreatePeopleArgs, \\"input\\">
+              >;
+              deletePeople?: Resolver<
+                ResolversTypes[\\"DeleteInfo\\"],
+                ParentType,
+                ContextType,
+                Partial<MutationDeletePeopleArgs>
+              >;
+              updatePeople?: Resolver<
+                ResolversTypes[\\"UpdatePeopleMutationResponse\\"],
+                ParentType,
+                ContextType,
+                Partial<MutationUpdatePeopleArgs>
+              >;
+            };
+
+            export type ActedInResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"ActedIn\\"] = ResolversParentTypes[\\"ActedIn\\"]
+            > = {
+              screenTime?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type CreateInfoResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"CreateInfo\\"] = ResolversParentTypes[\\"CreateInfo\\"]
+            > = {
+              bookmark?: Resolver<Maybe<ResolversTypes[\\"String\\"]>, ParentType, ContextType>;
+              nodesCreated?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              relationshipsCreated?: Resolver<
+                ResolversTypes[\\"Int\\"],
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type CreateMoviesMutationResponseResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"CreateMoviesMutationResponse\\"] = ResolversParentTypes[\\"CreateMoviesMutationResponse\\"]
+            > = {
+              info?: Resolver<ResolversTypes[\\"CreateInfo\\"], ParentType, ContextType>;
+              movies?: Resolver<Array<ResolversTypes[\\"Movie\\"]>, ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type CreatePeopleMutationResponseResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"CreatePeopleMutationResponse\\"] = ResolversParentTypes[\\"CreatePeopleMutationResponse\\"]
+            > = {
+              info?: Resolver<ResolversTypes[\\"CreateInfo\\"], ParentType, ContextType>;
+              people?: Resolver<Array<ResolversTypes[\\"Person\\"]>, ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type DeleteInfoResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"DeleteInfo\\"] = ResolversParentTypes[\\"DeleteInfo\\"]
+            > = {
+              bookmark?: Resolver<Maybe<ResolversTypes[\\"String\\"]>, ParentType, ContextType>;
+              nodesDeleted?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              relationshipsDeleted?: Resolver<
+                ResolversTypes[\\"Int\\"],
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type IntAggregateSelectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"IntAggregateSelection\\"] = ResolversParentTypes[\\"IntAggregateSelection\\"]
+            > = {
+              max?: Resolver<Maybe<ResolversTypes[\\"Int\\"]>, ParentType, ContextType>;
+              min?: Resolver<Maybe<ResolversTypes[\\"Int\\"]>, ParentType, ContextType>;
+              average?: Resolver<Maybe<ResolversTypes[\\"Float\\"]>, ParentType, ContextType>;
+              sum?: Resolver<Maybe<ResolversTypes[\\"Int\\"]>, ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type MovieResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"Movie\\"] = ResolversParentTypes[\\"Movie\\"]
+            > = {
+              title?: Resolver<ResolversTypes[\\"String\\"], ParentType, ContextType>;
+              actorsAggregate?: Resolver<
+                Maybe<ResolversTypes[\\"MoviePersonActorsAggregationSelection\\"]>,
+                ParentType,
+                ContextType,
+                RequireFields<MovieActorsAggregateArgs, \\"directed\\">
+              >;
+              actors?: Resolver<
+                Array<ResolversTypes[\\"Person\\"]>,
+                ParentType,
+                ContextType,
+                RequireFields<MovieActorsArgs, \\"directed\\">
+              >;
+              actorsConnection?: Resolver<
+                ResolversTypes[\\"MovieActorsConnection\\"],
+                ParentType,
+                ContextType,
+                RequireFields<MovieActorsConnectionArgs, \\"directed\\">
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type MovieActorsConnectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"MovieActorsConnection\\"] = ResolversParentTypes[\\"MovieActorsConnection\\"]
+            > = {
+              edges?: Resolver<
+                Array<ResolversTypes[\\"MovieActorsRelationship\\"]>,
+                ParentType,
+                ContextType
+              >;
+              totalCount?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              pageInfo?: Resolver<ResolversTypes[\\"PageInfo\\"], ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type MovieActorsRelationshipResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"MovieActorsRelationship\\"] = ResolversParentTypes[\\"MovieActorsRelationship\\"]
+            > = {
+              cursor?: Resolver<ResolversTypes[\\"String\\"], ParentType, ContextType>;
+              node?: Resolver<ResolversTypes[\\"Person\\"], ParentType, ContextType>;
+              properties?: Resolver<ResolversTypes[\\"ActedIn\\"], ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type MovieAggregateSelectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"MovieAggregateSelection\\"] = ResolversParentTypes[\\"MovieAggregateSelection\\"]
+            > = {
+              count?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              title?: Resolver<
+                ResolversTypes[\\"StringAggregateSelection\\"],
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type MovieEdgeResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"MovieEdge\\"] = ResolversParentTypes[\\"MovieEdge\\"]
+            > = {
+              cursor?: Resolver<ResolversTypes[\\"String\\"], ParentType, ContextType>;
+              node?: Resolver<ResolversTypes[\\"Movie\\"], ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type MoviePersonActorsAggregationSelectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"MoviePersonActorsAggregationSelection\\"] = ResolversParentTypes[\\"MoviePersonActorsAggregationSelection\\"]
+            > = {
+              count?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              node?: Resolver<
+                Maybe<ResolversTypes[\\"MoviePersonActorsNodeAggregateSelection\\"]>,
+                ParentType,
+                ContextType
+              >;
+              edge?: Resolver<
+                Maybe<ResolversTypes[\\"MoviePersonActorsEdgeAggregateSelection\\"]>,
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type MoviePersonActorsEdgeAggregateSelectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"MoviePersonActorsEdgeAggregateSelection\\"] = ResolversParentTypes[\\"MoviePersonActorsEdgeAggregateSelection\\"]
+            > = {
+              screenTime?: Resolver<
+                ResolversTypes[\\"IntAggregateSelection\\"],
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type MoviePersonActorsNodeAggregateSelectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"MoviePersonActorsNodeAggregateSelection\\"] = ResolversParentTypes[\\"MoviePersonActorsNodeAggregateSelection\\"]
+            > = {
+              name?: Resolver<
+                ResolversTypes[\\"StringAggregateSelection\\"],
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type MoviesConnectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"MoviesConnection\\"] = ResolversParentTypes[\\"MoviesConnection\\"]
+            > = {
+              totalCount?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              pageInfo?: Resolver<ResolversTypes[\\"PageInfo\\"], ParentType, ContextType>;
+              edges?: Resolver<Array<ResolversTypes[\\"MovieEdge\\"]>, ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type PageInfoResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"PageInfo\\"] = ResolversParentTypes[\\"PageInfo\\"]
+            > = {
+              hasNextPage?: Resolver<ResolversTypes[\\"Boolean\\"], ParentType, ContextType>;
+              hasPreviousPage?: Resolver<
+                ResolversTypes[\\"Boolean\\"],
+                ParentType,
+                ContextType
+              >;
+              startCursor?: Resolver<
+                Maybe<ResolversTypes[\\"String\\"]>,
+                ParentType,
+                ContextType
+              >;
+              endCursor?: Resolver<
+                Maybe<ResolversTypes[\\"String\\"]>,
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type PeopleConnectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"PeopleConnection\\"] = ResolversParentTypes[\\"PeopleConnection\\"]
+            > = {
+              totalCount?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              pageInfo?: Resolver<ResolversTypes[\\"PageInfo\\"], ParentType, ContextType>;
+              edges?: Resolver<
+                Array<ResolversTypes[\\"PersonEdge\\"]>,
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type PersonResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"Person\\"] = ResolversParentTypes[\\"Person\\"]
+            > = {
+              name?: Resolver<ResolversTypes[\\"String\\"], ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type PersonAggregateSelectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"PersonAggregateSelection\\"] = ResolversParentTypes[\\"PersonAggregateSelection\\"]
+            > = {
+              count?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              name?: Resolver<
+                ResolversTypes[\\"StringAggregateSelection\\"],
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type PersonEdgeResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"PersonEdge\\"] = ResolversParentTypes[\\"PersonEdge\\"]
+            > = {
+              cursor?: Resolver<ResolversTypes[\\"String\\"], ParentType, ContextType>;
+              node?: Resolver<ResolversTypes[\\"Person\\"], ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type StringAggregateSelectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"StringAggregateSelection\\"] = ResolversParentTypes[\\"StringAggregateSelection\\"]
+            > = {
+              shortest?: Resolver<Maybe<ResolversTypes[\\"String\\"]>, ParentType, ContextType>;
+              longest?: Resolver<Maybe<ResolversTypes[\\"String\\"]>, ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type UpdateInfoResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"UpdateInfo\\"] = ResolversParentTypes[\\"UpdateInfo\\"]
+            > = {
+              bookmark?: Resolver<Maybe<ResolversTypes[\\"String\\"]>, ParentType, ContextType>;
+              nodesCreated?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              nodesDeleted?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              relationshipsCreated?: Resolver<
+                ResolversTypes[\\"Int\\"],
+                ParentType,
+                ContextType
+              >;
+              relationshipsDeleted?: Resolver<
+                ResolversTypes[\\"Int\\"],
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type UpdateMoviesMutationResponseResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"UpdateMoviesMutationResponse\\"] = ResolversParentTypes[\\"UpdateMoviesMutationResponse\\"]
+            > = {
+              info?: Resolver<ResolversTypes[\\"UpdateInfo\\"], ParentType, ContextType>;
+              movies?: Resolver<Array<ResolversTypes[\\"Movie\\"]>, ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type UpdatePeopleMutationResponseResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"UpdatePeopleMutationResponse\\"] = ResolversParentTypes[\\"UpdatePeopleMutationResponse\\"]
+            > = {
+              info?: Resolver<ResolversTypes[\\"UpdateInfo\\"], ParentType, ContextType>;
+              people?: Resolver<Array<ResolversTypes[\\"Person\\"]>, ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type Resolvers<ContextType = any> = {
+              Query?: QueryResolvers<ContextType>;
+              Mutation?: MutationResolvers<ContextType>;
+              ActedIn?: ActedInResolvers<ContextType>;
+              CreateInfo?: CreateInfoResolvers<ContextType>;
+              CreateMoviesMutationResponse?: CreateMoviesMutationResponseResolvers<ContextType>;
+              CreatePeopleMutationResponse?: CreatePeopleMutationResponseResolvers<ContextType>;
+              DeleteInfo?: DeleteInfoResolvers<ContextType>;
+              IntAggregateSelection?: IntAggregateSelectionResolvers<ContextType>;
+              Movie?: MovieResolvers<ContextType>;
+              MovieActorsConnection?: MovieActorsConnectionResolvers<ContextType>;
+              MovieActorsRelationship?: MovieActorsRelationshipResolvers<ContextType>;
+              MovieAggregateSelection?: MovieAggregateSelectionResolvers<ContextType>;
+              MovieEdge?: MovieEdgeResolvers<ContextType>;
+              MoviePersonActorsAggregationSelection?: MoviePersonActorsAggregationSelectionResolvers<ContextType>;
+              MoviePersonActorsEdgeAggregateSelection?: MoviePersonActorsEdgeAggregateSelectionResolvers<ContextType>;
+              MoviePersonActorsNodeAggregateSelection?: MoviePersonActorsNodeAggregateSelectionResolvers<ContextType>;
+              MoviesConnection?: MoviesConnectionResolvers<ContextType>;
+              PageInfo?: PageInfoResolvers<ContextType>;
+              PeopleConnection?: PeopleConnectionResolvers<ContextType>;
+              Person?: PersonResolvers<ContextType>;
+              PersonAggregateSelection?: PersonAggregateSelectionResolvers<ContextType>;
+              PersonEdge?: PersonEdgeResolvers<ContextType>;
+              StringAggregateSelection?: StringAggregateSelectionResolvers<ContextType>;
+              UpdateInfo?: UpdateInfoResolvers<ContextType>;
+              UpdateMoviesMutationResponse?: UpdateMoviesMutationResponseResolvers<ContextType>;
+              UpdatePeopleMutationResponse?: UpdatePeopleMutationResponseResolvers<ContextType>;
+            };
+
             export interface MovieAggregateSelectionInput {
               count?: boolean;
               title?: boolean;
             }
+
+            export type MovieSelectionSet = SelectionSetObject<Movie, MovieResolvers>;
+            export type InferFromMovieSelectionSet<
+              TSelectionSet extends MovieSelectionSet
+            > = InferFromSelectionSetObject<Movie, MovieResolvers, TSelectionSet>;
 
             export declare class MovieModel {
               public find(args?: {
@@ -1598,6 +5122,15 @@ describe("generate", () => {
                 context?: any;
                 rootValue?: any;
               }): Promise<Movie[]>;
+              public findSafe<TSelectionSet extends MovieSelectionSet>(args?: {
+                where?: MovieWhere;
+
+                options?: MovieOptions;
+                selectionSet?: TSelectionSet;
+                args?: any;
+                context?: any;
+                rootValue?: any;
+              }): Promise<Prettify<InferFromMovieSelectionSet<TSelectionSet>>[]>;
               public create(args: {
                 input: MovieCreateInput[];
                 selectionSet?: string | DocumentNode | SelectionSetNode;
@@ -1637,6 +5170,11 @@ describe("generate", () => {
               name?: boolean;
             }
 
+            export type PersonSelectionSet = SelectionSetObject<Person, PersonResolvers>;
+            export type InferFromPersonSelectionSet<
+              TSelectionSet extends PersonSelectionSet
+            > = InferFromSelectionSetObject<Person, PersonResolvers, TSelectionSet>;
+
             export declare class PersonModel {
               public find(args?: {
                 where?: PersonWhere;
@@ -1647,6 +5185,15 @@ describe("generate", () => {
                 context?: any;
                 rootValue?: any;
               }): Promise<Person[]>;
+              public findSafe<TSelectionSet extends PersonSelectionSet>(args?: {
+                where?: PersonWhere;
+
+                options?: PersonOptions;
+                selectionSet?: TSelectionSet;
+                args?: any;
+                context?: any;
+                rootValue?: any;
+              }): Promise<Prettify<InferFromPersonSelectionSet<TSelectionSet>>[]>;
               public create(args: {
                 input: PersonCreateInput[];
                 selectionSet?: string | DocumentNode | SelectionSetNode;
@@ -1741,6 +5288,434 @@ describe("generate", () => {
 
         expect(generated).toMatchInlineSnapshot(`
             "import type { SelectionSetNode, DocumentNode } from \\"graphql\\";
+            import type { RawGQL } from \\"@neo4j/graphql-ogm\\";
+            export type RequiredResolvers = Required<Resolvers>;
+            export type Primitive = string | number | boolean;
+            export type Prettify<T> = {
+              [K in keyof T]: T[K];
+            } & {};
+            export type AddRawGQL<T> = NonNullable<T> extends (infer TItem)[]
+              ? (TItem | RawGQL)[]
+              : NonNullable<T> extends Primitive
+              ? T
+              : IsAny<NonNullable<T>> extends true
+              ? T
+              : {
+                  [key in keyof T]: AddRawGQL<T[key]> | RawGQL;
+                };
+
+            export type AddRawGQLToOptions<TProps> = TProps extends { where?: infer TWhere }
+              ? {
+                  where?: AddRawGQL<NonNullable<TWhere>>;
+                } & AddRawGQLToOptions<Omit<TProps, \\"where\\">>
+              : TProps extends { sort?: infer TSort }
+              ? {
+                  sort?: NonNullable<TSort> extends (infer TItem)[]
+                    ? AddRawGQL<NonNullable<TItem>>[]
+                    : never;
+                }
+              : {};
+
+            export type ResolverArgs<
+              TModel extends object,
+              TKey extends keyof TModel,
+              TResolvers extends { [key: PropertyKey]: Resolver<any, any, any, any> }
+            > = TModel[TKey] extends Primitive
+              ? never
+              : NonNullable<TResolvers[TKey]> extends Resolver<any, any, any, infer Props>
+              ? \\"directed\\" extends keyof Props
+                ? Omit<Props, \\"directed\\" | \\"where\\" | \\"sort\\"> & {
+                    directed?: boolean;
+                  } & AddRawGQLToOptions<Props>
+                : {}
+              : {};
+
+            export type UnionToIntersection<U> = (
+              U extends any ? (k: U) => void : never
+            ) extends (k: infer I) => void
+              ? I
+              : never;
+            type LastOf<T> = UnionToIntersection<
+              T extends any ? () => T : never
+            > extends () => infer R
+              ? R
+              : never;
+
+            type Push<T extends any[], V> = [...T, V];
+
+            export type TuplifyUnion<
+              T,
+              L = LastOf<T>,
+              N = [T] extends [never] ? true : false
+            > = true extends N ? [] : Push<TuplifyUnion<Exclude<T, L>>, L>;
+
+            // This is pure magic
+            export type MagicArray<TArray extends any[]> =
+              NonNullable<TArray> extends (infer TItem)[] ? TItem[] : never;
+            export type MagicObject<TElement> =
+              NonNullable<TElement> extends (infer TItem)[]
+                ? TItem[]
+                : NonNullable<TElement> extends Primitive
+                ? TElement
+                : {
+                    [key in keyof TElement as TElement[key] extends never
+                      ? never
+                      : key]: MagicObject<TElement[key]>;
+                  };
+
+            export type StripNeverKeys<TElement> = TElement extends object
+              ? {
+                  [key in keyof TElement as [TElement[key]] extends [never]
+                    ? never
+                    : TElement[key] extends never[]
+                    ? never
+                    : key]: TElement[key];
+                }
+              : TElement;
+
+            export type ClearObjectWithNeverKeys<
+              TElement,
+              TStripped = StripNeverKeys<TElement>
+            > = [keyof Omit<TElement, keyof TStripped>] extends [never] ? TStripped : never;
+
+            export type StripNeverKeysAddTypename<
+              TElement,
+              TKey,
+              TStripped = ClearObjectWithNeverKeys<TElement>
+            > = [keyof TStripped] extends [never]
+              ? never
+              : TStripped & { __typename: TKey };
+
+            type RetrieveType<TItem> = Exclude<
+              TItem,
+              Promise<any>
+            > extends ResolverTypeWrapper<infer TValue>
+              ? TValue extends { __typename?: infer TName }
+                ? TItem extends object
+                  ? TName extends keyof Resolvers
+                    ? \\"__isTypeOf\\" extends keyof RequiredResolvers[TName]
+                      ? Omit<RequiredResolvers[TName], \\"__isTypeOf\\"> extends {
+                          [key: string]: Resolver<any, any, any, any>;
+                        }
+                        ? {
+                            Model: Exclude<TItem, Promise<any>>;
+                            Resolvers: Omit<RequiredResolvers[TName], \\"__isTypeOf\\">;
+                          }
+                        : never
+                      : never
+                    : never
+                  : never
+                : never
+              : never;
+
+            export type ResolverReturnType<
+              TModel extends object,
+              TKey extends keyof TModel,
+              TResolvers extends { [key: PropertyKey]: Resolver<any, any, any, any> }
+            > = TModel[TKey] extends Primitive
+              ? never
+              : NonNullable<TResolvers[TKey]> extends Resolver<infer Props, any, any, any>
+              ? Props extends (infer TItem)[]
+                ? RetrieveType<Exclude<TItem, Promise<any>>>
+                : RetrieveType<Exclude<Props, Promise<any>>>
+              : never;
+
+            export type ResolverObject = {
+              [key: PropertyKey]: Resolver<any, any, any> | Resolver<any, any, any, any>;
+            };
+
+            export type ResolveKey<
+              TModel extends object,
+              TResolvers extends ResolverObject,
+              TItem,
+              TKey,
+              TOmittedElement = TKey extends keyof TItem
+                ? Omit<
+                    NonNullable<TItem[TKey]>,
+                    \\"where\\" | \\"directed\\" | \\"options\\" | \\"after\\" | \\"first\\" | \\"sort\\"
+                  >
+                : never
+            > = TKey extends keyof TModel
+              ? NonNullable<TModel[TKey]> extends Primitive
+                ? TModel[TKey]
+                : ResolverReturnType<TModel, TKey, TResolvers> extends {
+                    Model: infer NestedTModel;
+                    Resolvers: infer NestedResolvers;
+                  }
+                ? NestedTModel extends object
+                  ? NestedResolvers extends ResolverObject
+                    ? TKey extends keyof TItem
+                      ? \\"on\\" extends keyof TOmittedElement
+                        ?
+                            | ({
+                                -readonly [key in keyof TOmittedElement[\\"on\\"]]: StripNeverKeysAddTypename<
+                                  {
+                                    -readonly [K in keyof TOmittedElement[\\"on\\"][key]]: K extends keyof NestedTModel
+                                      ? NestedTModel[K] extends any[]
+                                        ? MagicArray<
+                                            ResolveKey<
+                                              NestedTModel,
+                                              NestedResolvers,
+                                              TOmittedElement[\\"on\\"][key],
+                                              K
+                                            >[]
+                                          >
+                                        : ResolveKey<
+                                            NestedTModel,
+                                            NestedResolvers,
+                                            TOmittedElement[\\"on\\"][key],
+                                            K
+                                          >
+                                      : never;
+                                  },
+                                  key
+                                >;
+                              }[keyof TOmittedElement[\\"on\\"]] &
+                                ResolveKey<
+                                  TModel,
+                                  TResolvers,
+                                  Omit<TItem, TKey> & {
+                                    [key in TKey]: Omit<TOmittedElement, \\"on\\">;
+                                  },
+                                  TKey
+                                >)
+                            | (undefined extends TModel[TKey]
+                                ? NonNullable<TModel[TKey]> extends any[]
+                                  ? never
+                                  : undefined
+                                : never)
+                            | (undefined extends TItem[TKey]
+                                ? NonNullable<TModel[TKey]> extends any[]
+                                  ? never
+                                  : undefined
+                                : never)
+                        : ClearObjectWithNeverKeys<
+                            | {
+                                -readonly [key in keyof TOmittedElement as key extends keyof NestedTModel
+                                  ? key
+                                  : never]: key extends keyof NestedTModel
+                                  ? NestedTModel[key] extends any[]
+                                    ? MagicArray<
+                                        ResolveKey<
+                                          NestedTModel,
+                                          NestedResolvers,
+                                          TOmittedElement,
+                                          key
+                                        >[]
+                                      >
+                                    : ResolveKey<
+                                        NestedTModel,
+                                        NestedResolvers,
+                                        TOmittedElement,
+                                        key
+                                      >
+                                  : never;
+                              }
+                            | (undefined extends TModel[TKey]
+                                ? NonNullable<TModel[TKey]> extends any[]
+                                  ? never
+                                  : undefined
+                                : never)
+                            | (undefined extends TItem[TKey]
+                                ? NonNullable<TModel[TKey]> extends any[]
+                                  ? never
+                                  : undefined
+                                : never)
+                          >
+                      : never
+                    : never
+                  : TModel[TKey] extends (infer TArrayItem)[]
+                  ? NonNullable<TArrayItem> extends Primitive
+                    ? TArrayItem
+                    : never
+                  : never
+                : never
+              : never;
+
+            //Only if TValue = any, this is true
+            export type IsAny<TValue> = unknown extends TValue ? true : false;
+
+            export type NestedBooleanObject<
+              TModel extends object,
+              TResolvers extends ResolverObject,
+              TKey extends keyof TModel,
+              TElement,
+              RequiredValue extends NonNullable<TElement> = NonNullable<TElement>
+            > = IsAny<RequiredValue> extends true
+              ? boolean
+              : RequiredValue extends object
+              ? RequiredValue extends (infer TItem)[]
+                ? NonNullable<TItem> extends Primitive
+                  ? boolean
+                  : {
+                      [key in keyof TItem]?: ResolverReturnType<
+                        TModel,
+                        TKey,
+                        TResolvers
+                      > extends {
+                        Model: infer NestedModel;
+                        Resolvers: infer NestedResolvers;
+                      }
+                        ? NestedModel extends object
+                          ? NestedResolvers extends ResolverObject
+                            ? key extends keyof NestedModel
+                              ? NonNullable<TItem[key]> extends object
+                                ? NonNullable<TItem[key]> extends any[]
+                                  ? NestedBooleanObject<
+                                      NestedModel,
+                                      NestedResolvers,
+                                      key,
+                                      NonNullable<NonNullable<TItem>[key]>
+                                    >
+                                  : IsAny<NonNullable<TItem[key]>> extends true
+                                  ? boolean
+                                  : \\"__typename\\" extends keyof NonNullable<TItem[key]>
+                                  ? NestedBooleanObject<
+                                      NestedModel,
+                                      NestedResolvers,
+                                      key,
+                                      UnionToIntersection<
+                                        Omit<
+                                          NonNullable<NonNullable<TItem>[key]>,
+                                          \\"__typename\\"
+                                        >
+                                      > & {
+                                        __typename: NonNullable<
+                                          NonNullable<TItem[key]>[\\"__typename\\"]
+                                        >;
+                                      }
+                                    >
+                                  : never
+                                : boolean
+                              : never
+                            : never
+                          : never
+                        : never;
+                    } & ResolverArgs<TModel, TKey, TResolvers> &
+                      BooleanOn<TElement>
+                : {
+                    [key in keyof RequiredValue]?: ResolverReturnType<
+                      TModel,
+                      TKey,
+                      TResolvers
+                    > extends { Model: infer NestedModel; Resolvers: infer NestedResolvers }
+                      ? NestedModel extends object
+                        ? NestedResolvers extends ResolverObject
+                          ? key extends keyof NestedModel
+                            ? NonNullable<RequiredValue[key]> extends any[]
+                              ? NestedBooleanObject<
+                                  NestedModel,
+                                  NestedResolvers,
+                                  key,
+                                  NonNullable<RequiredValue[key]>
+                                >
+                              : NonNullable<RequiredValue[key]> extends object
+                              ? IsAny<NonNullable<RequiredValue[key]>> extends true
+                                ? boolean
+                                : \\"__typename\\" extends keyof NonNullable<RequiredValue[key]>
+                                ? NestedBooleanObject<
+                                    NestedModel,
+                                    NestedResolvers,
+                                    key,
+                                    UnionToIntersection<
+                                      Omit<NonNullable<RequiredValue[key]>, \\"__typename\\">
+                                    > & {
+                                      __typename: NonNullable<
+                                        NonNullable<RequiredValue[key]>[\\"__typename\\"]
+                                      >;
+                                    }
+                                  >
+                                : never
+                              : boolean
+                            : never
+                          : never
+                        : never
+                      : never;
+                  } & BooleanOn<TElement> &
+                    ResolverArgs<TModel, TKey, TResolvers>
+              : boolean;
+
+            export type SelectionSetObject<
+              TModel extends object,
+              TResolvers extends ResolverObject
+            > = {
+              [key in keyof TModel]?: NonNullable<TModel[key]> extends Primitive
+                ? boolean
+                : NonNullable<TModel[key]> extends (infer TItem)[]
+                ? \\"__typename\\" extends keyof TItem
+                  ? NestedBooleanObject<
+                      TModel,
+                      TResolvers,
+                      key,
+                      Prettify<
+                        UnionToIntersection<Omit<NonNullable<TItem>, \\"__typename\\">> & {
+                          __typename: NonNullable<NonNullable<TItem>[\\"__typename\\"]>;
+                        }
+                      >
+                    >
+                  : NonNullable<TItem> extends Primitive
+                  ? boolean
+                  : never
+                : \\"__typename\\" extends keyof NonNullable<TModel[key]>
+                ? NestedBooleanObject<
+                    TModel,
+                    TResolvers,
+                    key,
+                    Prettify<
+                      UnionToIntersection<Omit<NonNullable<TModel[key]>, \\"__typename\\">> & {
+                        __typename: NonNullable<NonNullable<TModel[key]>[\\"__typename\\"]>;
+                      }
+                    >
+                  >
+                : never;
+            };
+
+            type BooleanOn<TElement> = TElement extends { __typename: infer Typename }
+              ? TuplifyUnion<NonNullable<Typename>>[\\"length\\"] extends 1
+                ? {}
+                : NonNullable<Typename> extends string
+                ? {
+                    on?: {
+                      [key in NonNullable<Typename>]?: key extends keyof RequiredResolvers
+                        ? key extends keyof ResolversTypes
+                          ? Omit<
+                              RequiredResolvers[key],
+                              \\"__isTypeOf\\"
+                            > extends ResolverObject
+                            ? {
+                                [K in keyof NonNullable<
+                                  Exclude<ResolversTypes[key], Promise<any>>
+                                >]?: NestedBooleanObject<
+                                  NonNullable<Exclude<ResolversTypes[key], Promise<any>>>,
+                                  Omit<RequiredResolvers[key], \\"__isTypeOf\\">,
+                                  K,
+                                  NonNullable<Exclude<ResolversTypes[key], Promise<any>>>[K]
+                                >;
+                              }
+                            : never
+                          : never
+                        : never;
+                    };
+                  }
+                : never
+              : {};
+
+            export type InferFromSelectionSetObject<
+              TModel extends object,
+              TResolvers extends ResolverObject,
+              TSelectionSet extends SelectionSetObject<TModel, TResolvers>
+            > = MagicObject<{
+              -readonly [key in keyof TSelectionSet]: key extends keyof TModel
+                ? NonNullable<TModel[key]> extends any[]
+                  ?
+                      | ResolveKey<TModel, TResolvers, TSelectionSet, key>[]
+                      | (undefined extends TModel[key] ? undefined : never)
+                  :
+                      | ResolveKey<TModel, TResolvers, TSelectionSet, key>
+                      | (undefined extends TModel[key] ? undefined : never)
+                : never;
+            }>;
+            import { GraphQLResolveInfo } from \\"graphql\\";
             export type Maybe<T> = T | null;
             export type InputMaybe<T> = Maybe<T>;
             export type Exact<T extends { [key: string]: unknown }> = {
@@ -1761,6 +5736,9 @@ describe("generate", () => {
               | {
                   [P in keyof T]?: P extends \\" $fragmentName\\" | \\"__typename\\" ? T[P] : never;
                 };
+            export type RequireFields<T, K extends keyof T> = Omit<T, K> & {
+              [P in K]-?: NonNullable<T[P]>;
+            };
             /** All built-in and custom scalars, mapped to their actual values */
             export type Scalars = {
               /** The \`ID\` scalar type represents a unique identifier, often used to refetch an object or as key for a cache. The ID type appears in a JSON response as a String; however, it is not intended to be human-readable. When expected as an input type, any string (such as \`\\"4\\"\`) or integer (such as \`4\`) input value will be accepted as an ID. */
@@ -2810,11 +6788,886 @@ describe("generate", () => {
               entriesAggregate?: InputMaybe<FaqEntriesAggregateInput>;
             };
 
+            export type ResolverTypeWrapper<T> = Promise<T> | T;
+
+            export type ResolverWithResolve<TResult, TParent, TContext, TArgs> = {
+              resolve: ResolverFn<TResult, TParent, TContext, TArgs>;
+            };
+            export type Resolver<TResult, TParent = {}, TContext = {}, TArgs = {}> =
+              | ResolverFn<TResult, TParent, TContext, TArgs>
+              | ResolverWithResolve<TResult, TParent, TContext, TArgs>;
+
+            export type ResolverFn<TResult, TParent, TContext, TArgs> = (
+              parent: TParent,
+              args: TArgs,
+              context: TContext,
+              info: GraphQLResolveInfo
+            ) => Promise<TResult> | TResult;
+
+            export type SubscriptionSubscribeFn<TResult, TParent, TContext, TArgs> = (
+              parent: TParent,
+              args: TArgs,
+              context: TContext,
+              info: GraphQLResolveInfo
+            ) => AsyncIterable<TResult> | Promise<AsyncIterable<TResult>>;
+
+            export type SubscriptionResolveFn<TResult, TParent, TContext, TArgs> = (
+              parent: TParent,
+              args: TArgs,
+              context: TContext,
+              info: GraphQLResolveInfo
+            ) => TResult | Promise<TResult>;
+
+            export interface SubscriptionSubscriberObject<
+              TResult,
+              TKey extends string,
+              TParent,
+              TContext,
+              TArgs
+            > {
+              subscribe: SubscriptionSubscribeFn<
+                { [key in TKey]: TResult },
+                TParent,
+                TContext,
+                TArgs
+              >;
+              resolve?: SubscriptionResolveFn<
+                TResult,
+                { [key in TKey]: TResult },
+                TContext,
+                TArgs
+              >;
+            }
+
+            export interface SubscriptionResolverObject<TResult, TParent, TContext, TArgs> {
+              subscribe: SubscriptionSubscribeFn<any, TParent, TContext, TArgs>;
+              resolve: SubscriptionResolveFn<TResult, any, TContext, TArgs>;
+            }
+
+            export type SubscriptionObject<
+              TResult,
+              TKey extends string,
+              TParent,
+              TContext,
+              TArgs
+            > =
+              | SubscriptionSubscriberObject<TResult, TKey, TParent, TContext, TArgs>
+              | SubscriptionResolverObject<TResult, TParent, TContext, TArgs>;
+
+            export type SubscriptionResolver<
+              TResult,
+              TKey extends string,
+              TParent = {},
+              TContext = {},
+              TArgs = {}
+            > =
+              | ((
+                  ...args: any[]
+                ) => SubscriptionObject<TResult, TKey, TParent, TContext, TArgs>)
+              | SubscriptionObject<TResult, TKey, TParent, TContext, TArgs>;
+
+            export type TypeResolveFn<TTypes, TParent = {}, TContext = {}> = (
+              parent: TParent,
+              context: TContext,
+              info: GraphQLResolveInfo
+            ) => Maybe<TTypes> | Promise<Maybe<TTypes>>;
+
+            export type IsTypeOfResolverFn<T = {}, TContext = {}> = (
+              obj: T,
+              context: TContext,
+              info: GraphQLResolveInfo
+            ) => boolean | Promise<boolean>;
+
+            export type NextResolverFn<T> = () => Promise<T>;
+
+            export type DirectiveResolverFn<
+              TResult = {},
+              TParent = {},
+              TContext = {},
+              TArgs = {}
+            > = (
+              next: NextResolverFn<TResult>,
+              parent: TParent,
+              args: TArgs,
+              context: TContext,
+              info: GraphQLResolveInfo
+            ) => TResult | Promise<TResult>;
+
+            /** Mapping between all available schema types and the resolvers types */
+            export type ResolversTypes = {
+              Query: ResolverTypeWrapper<{}>;
+              Int: ResolverTypeWrapper<Scalars[\\"Int\\"][\\"output\\"]>;
+              String: ResolverTypeWrapper<Scalars[\\"String\\"][\\"output\\"]>;
+              Mutation: ResolverTypeWrapper<{}>;
+              SortDirection: SortDirection;
+              CreateFaqEntriesMutationResponse: ResolverTypeWrapper<CreateFaqEntriesMutationResponse>;
+              CreateFaqsMutationResponse: ResolverTypeWrapper<CreateFaqsMutationResponse>;
+              CreateInfo: ResolverTypeWrapper<CreateInfo>;
+              DeleteInfo: ResolverTypeWrapper<DeleteInfo>;
+              FAQ: ResolverTypeWrapper<Faq>;
+              ID: ResolverTypeWrapper<Scalars[\\"ID\\"][\\"output\\"]>;
+              Boolean: ResolverTypeWrapper<Scalars[\\"Boolean\\"][\\"output\\"]>;
+              FAQAggregateSelection: ResolverTypeWrapper<FaqAggregateSelection>;
+              FAQEdge: ResolverTypeWrapper<FaqEdge>;
+              FaqEntriesConnection: ResolverTypeWrapper<FaqEntriesConnection>;
+              FAQEntriesConnection: ResolverTypeWrapper<FaqEntriesConnection>;
+              FAQEntriesRelationship: ResolverTypeWrapper<FaqEntriesRelationship>;
+              FAQEntry: ResolverTypeWrapper<FaqEntry>;
+              FAQEntryAggregateSelection: ResolverTypeWrapper<FaqEntryAggregateSelection>;
+              FAQEntryEdge: ResolverTypeWrapper<FaqEntryEdge>;
+              FAQEntryFAQInFAQsAggregationSelection: ResolverTypeWrapper<FaqEntryFaqInFaQsAggregationSelection>;
+              FAQEntryFAQInFAQsEdgeAggregateSelection: ResolverTypeWrapper<FaqEntryFaqInFaQsEdgeAggregateSelection>;
+              FAQEntryFAQInFAQsNodeAggregateSelection: ResolverTypeWrapper<FaqEntryFaqInFaQsNodeAggregateSelection>;
+              FaqEntryInFaq: ResolverTypeWrapper<FaqEntryInFaq>;
+              FAQEntryInFAQsConnection: ResolverTypeWrapper<FaqEntryInFaQsConnection>;
+              FAQEntryInFAQsRelationship: ResolverTypeWrapper<FaqEntryInFaQsRelationship>;
+              FAQFAQEntryEntriesAggregationSelection: ResolverTypeWrapper<FaqfaqEntryEntriesAggregationSelection>;
+              FAQFAQEntryEntriesEdgeAggregateSelection: ResolverTypeWrapper<FaqfaqEntryEntriesEdgeAggregateSelection>;
+              FAQFAQEntryEntriesNodeAggregateSelection: ResolverTypeWrapper<FaqfaqEntryEntriesNodeAggregateSelection>;
+              FaqsConnection: ResolverTypeWrapper<FaqsConnection>;
+              IDAggregateSelection: ResolverTypeWrapper<IdAggregateSelection>;
+              IntAggregateSelection: ResolverTypeWrapper<IntAggregateSelection>;
+              Float: ResolverTypeWrapper<Scalars[\\"Float\\"][\\"output\\"]>;
+              PageInfo: ResolverTypeWrapper<PageInfo>;
+              StringAggregateSelection: ResolverTypeWrapper<StringAggregateSelection>;
+              UpdateFaqEntriesMutationResponse: ResolverTypeWrapper<UpdateFaqEntriesMutationResponse>;
+              UpdateFaqsMutationResponse: ResolverTypeWrapper<UpdateFaqsMutationResponse>;
+              UpdateInfo: ResolverTypeWrapper<UpdateInfo>;
+              FAQConnectInput: FaqConnectInput;
+              FAQConnectOrCreateInput: FaqConnectOrCreateInput;
+              FAQConnectOrCreateWhere: FaqConnectOrCreateWhere;
+              FAQConnectWhere: FaqConnectWhere;
+              FAQCreateInput: FaqCreateInput;
+              FAQDeleteInput: FaqDeleteInput;
+              FAQDisconnectInput: FaqDisconnectInput;
+              FAQEntriesAggregateInput: FaqEntriesAggregateInput;
+              FAQEntriesConnectFieldInput: FaqEntriesConnectFieldInput;
+              FAQEntriesConnectionSort: FaqEntriesConnectionSort;
+              FAQEntriesConnectionWhere: FaqEntriesConnectionWhere;
+              FAQEntriesConnectOrCreateFieldInput: FaqEntriesConnectOrCreateFieldInput;
+              FAQEntriesConnectOrCreateFieldInputOnCreate: FaqEntriesConnectOrCreateFieldInputOnCreate;
+              FAQEntriesCreateFieldInput: FaqEntriesCreateFieldInput;
+              FAQEntriesDeleteFieldInput: FaqEntriesDeleteFieldInput;
+              FAQEntriesDisconnectFieldInput: FaqEntriesDisconnectFieldInput;
+              FAQEntriesFieldInput: FaqEntriesFieldInput;
+              FAQEntriesNodeAggregationWhereInput: FaqEntriesNodeAggregationWhereInput;
+              FAQEntriesUpdateConnectionInput: FaqEntriesUpdateConnectionInput;
+              FAQEntriesUpdateFieldInput: FaqEntriesUpdateFieldInput;
+              FAQEntryConnectInput: FaqEntryConnectInput;
+              FAQEntryConnectOrCreateInput: FaqEntryConnectOrCreateInput;
+              FAQEntryConnectOrCreateWhere: FaqEntryConnectOrCreateWhere;
+              FAQEntryConnectWhere: FaqEntryConnectWhere;
+              FAQEntryCreateInput: FaqEntryCreateInput;
+              FAQEntryDeleteInput: FaqEntryDeleteInput;
+              FAQEntryDisconnectInput: FaqEntryDisconnectInput;
+              FaqEntryInFaqAggregationWhereInput: FaqEntryInFaqAggregationWhereInput;
+              FaqEntryInFaqCreateInput: FaqEntryInFaqCreateInput;
+              FAQEntryInFAQsAggregateInput: FaqEntryInFaQsAggregateInput;
+              FAQEntryInFAQsConnectFieldInput: FaqEntryInFaQsConnectFieldInput;
+              FAQEntryInFAQsConnectionSort: FaqEntryInFaQsConnectionSort;
+              FAQEntryInFAQsConnectionWhere: FaqEntryInFaQsConnectionWhere;
+              FAQEntryInFAQsConnectOrCreateFieldInput: FaqEntryInFaQsConnectOrCreateFieldInput;
+              FAQEntryInFAQsConnectOrCreateFieldInputOnCreate: FaqEntryInFaQsConnectOrCreateFieldInputOnCreate;
+              FAQEntryInFAQsCreateFieldInput: FaqEntryInFaQsCreateFieldInput;
+              FAQEntryInFAQsDeleteFieldInput: FaqEntryInFaQsDeleteFieldInput;
+              FAQEntryInFAQsDisconnectFieldInput: FaqEntryInFaQsDisconnectFieldInput;
+              FAQEntryInFAQsFieldInput: FaqEntryInFaQsFieldInput;
+              FAQEntryInFAQsNodeAggregationWhereInput: FaqEntryInFaQsNodeAggregationWhereInput;
+              FaqEntryInFaqSort: FaqEntryInFaqSort;
+              FAQEntryInFAQsUpdateConnectionInput: FaqEntryInFaQsUpdateConnectionInput;
+              FAQEntryInFAQsUpdateFieldInput: FaqEntryInFaQsUpdateFieldInput;
+              FaqEntryInFaqUpdateInput: FaqEntryInFaqUpdateInput;
+              FaqEntryInFaqWhere: FaqEntryInFaqWhere;
+              FAQEntryOnCreateInput: FaqEntryOnCreateInput;
+              FAQEntryOptions: FaqEntryOptions;
+              FAQEntryRelationInput: FaqEntryRelationInput;
+              FAQEntrySort: FaqEntrySort;
+              FAQEntryUniqueWhere: FaqEntryUniqueWhere;
+              FAQEntryUpdateInput: FaqEntryUpdateInput;
+              FAQEntryWhere: FaqEntryWhere;
+              FAQOnCreateInput: FaqOnCreateInput;
+              FAQOptions: FaqOptions;
+              FAQRelationInput: FaqRelationInput;
+              FAQSort: FaqSort;
+              FAQUniqueWhere: FaqUniqueWhere;
+              FAQUpdateInput: FaqUpdateInput;
+              FAQWhere: FaqWhere;
+            };
+
+            /** Mapping between all available schema types and the resolvers parents */
+            export type ResolversParentTypes = {
+              Query: {};
+              Int: Scalars[\\"Int\\"][\\"output\\"];
+              String: Scalars[\\"String\\"][\\"output\\"];
+              Mutation: {};
+              CreateFaqEntriesMutationResponse: CreateFaqEntriesMutationResponse;
+              CreateFaqsMutationResponse: CreateFaqsMutationResponse;
+              CreateInfo: CreateInfo;
+              DeleteInfo: DeleteInfo;
+              FAQ: Faq;
+              ID: Scalars[\\"ID\\"][\\"output\\"];
+              Boolean: Scalars[\\"Boolean\\"][\\"output\\"];
+              FAQAggregateSelection: FaqAggregateSelection;
+              FAQEdge: FaqEdge;
+              FaqEntriesConnection: FaqEntriesConnection;
+              FAQEntriesConnection: FaqEntriesConnection;
+              FAQEntriesRelationship: FaqEntriesRelationship;
+              FAQEntry: FaqEntry;
+              FAQEntryAggregateSelection: FaqEntryAggregateSelection;
+              FAQEntryEdge: FaqEntryEdge;
+              FAQEntryFAQInFAQsAggregationSelection: FaqEntryFaqInFaQsAggregationSelection;
+              FAQEntryFAQInFAQsEdgeAggregateSelection: FaqEntryFaqInFaQsEdgeAggregateSelection;
+              FAQEntryFAQInFAQsNodeAggregateSelection: FaqEntryFaqInFaQsNodeAggregateSelection;
+              FaqEntryInFaq: FaqEntryInFaq;
+              FAQEntryInFAQsConnection: FaqEntryInFaQsConnection;
+              FAQEntryInFAQsRelationship: FaqEntryInFaQsRelationship;
+              FAQFAQEntryEntriesAggregationSelection: FaqfaqEntryEntriesAggregationSelection;
+              FAQFAQEntryEntriesEdgeAggregateSelection: FaqfaqEntryEntriesEdgeAggregateSelection;
+              FAQFAQEntryEntriesNodeAggregateSelection: FaqfaqEntryEntriesNodeAggregateSelection;
+              FaqsConnection: FaqsConnection;
+              IDAggregateSelection: IdAggregateSelection;
+              IntAggregateSelection: IntAggregateSelection;
+              Float: Scalars[\\"Float\\"][\\"output\\"];
+              PageInfo: PageInfo;
+              StringAggregateSelection: StringAggregateSelection;
+              UpdateFaqEntriesMutationResponse: UpdateFaqEntriesMutationResponse;
+              UpdateFaqsMutationResponse: UpdateFaqsMutationResponse;
+              UpdateInfo: UpdateInfo;
+              FAQConnectInput: FaqConnectInput;
+              FAQConnectOrCreateInput: FaqConnectOrCreateInput;
+              FAQConnectOrCreateWhere: FaqConnectOrCreateWhere;
+              FAQConnectWhere: FaqConnectWhere;
+              FAQCreateInput: FaqCreateInput;
+              FAQDeleteInput: FaqDeleteInput;
+              FAQDisconnectInput: FaqDisconnectInput;
+              FAQEntriesAggregateInput: FaqEntriesAggregateInput;
+              FAQEntriesConnectFieldInput: FaqEntriesConnectFieldInput;
+              FAQEntriesConnectionSort: FaqEntriesConnectionSort;
+              FAQEntriesConnectionWhere: FaqEntriesConnectionWhere;
+              FAQEntriesConnectOrCreateFieldInput: FaqEntriesConnectOrCreateFieldInput;
+              FAQEntriesConnectOrCreateFieldInputOnCreate: FaqEntriesConnectOrCreateFieldInputOnCreate;
+              FAQEntriesCreateFieldInput: FaqEntriesCreateFieldInput;
+              FAQEntriesDeleteFieldInput: FaqEntriesDeleteFieldInput;
+              FAQEntriesDisconnectFieldInput: FaqEntriesDisconnectFieldInput;
+              FAQEntriesFieldInput: FaqEntriesFieldInput;
+              FAQEntriesNodeAggregationWhereInput: FaqEntriesNodeAggregationWhereInput;
+              FAQEntriesUpdateConnectionInput: FaqEntriesUpdateConnectionInput;
+              FAQEntriesUpdateFieldInput: FaqEntriesUpdateFieldInput;
+              FAQEntryConnectInput: FaqEntryConnectInput;
+              FAQEntryConnectOrCreateInput: FaqEntryConnectOrCreateInput;
+              FAQEntryConnectOrCreateWhere: FaqEntryConnectOrCreateWhere;
+              FAQEntryConnectWhere: FaqEntryConnectWhere;
+              FAQEntryCreateInput: FaqEntryCreateInput;
+              FAQEntryDeleteInput: FaqEntryDeleteInput;
+              FAQEntryDisconnectInput: FaqEntryDisconnectInput;
+              FaqEntryInFaqAggregationWhereInput: FaqEntryInFaqAggregationWhereInput;
+              FaqEntryInFaqCreateInput: FaqEntryInFaqCreateInput;
+              FAQEntryInFAQsAggregateInput: FaqEntryInFaQsAggregateInput;
+              FAQEntryInFAQsConnectFieldInput: FaqEntryInFaQsConnectFieldInput;
+              FAQEntryInFAQsConnectionSort: FaqEntryInFaQsConnectionSort;
+              FAQEntryInFAQsConnectionWhere: FaqEntryInFaQsConnectionWhere;
+              FAQEntryInFAQsConnectOrCreateFieldInput: FaqEntryInFaQsConnectOrCreateFieldInput;
+              FAQEntryInFAQsConnectOrCreateFieldInputOnCreate: FaqEntryInFaQsConnectOrCreateFieldInputOnCreate;
+              FAQEntryInFAQsCreateFieldInput: FaqEntryInFaQsCreateFieldInput;
+              FAQEntryInFAQsDeleteFieldInput: FaqEntryInFaQsDeleteFieldInput;
+              FAQEntryInFAQsDisconnectFieldInput: FaqEntryInFaQsDisconnectFieldInput;
+              FAQEntryInFAQsFieldInput: FaqEntryInFaQsFieldInput;
+              FAQEntryInFAQsNodeAggregationWhereInput: FaqEntryInFaQsNodeAggregationWhereInput;
+              FaqEntryInFaqSort: FaqEntryInFaqSort;
+              FAQEntryInFAQsUpdateConnectionInput: FaqEntryInFaQsUpdateConnectionInput;
+              FAQEntryInFAQsUpdateFieldInput: FaqEntryInFaQsUpdateFieldInput;
+              FaqEntryInFaqUpdateInput: FaqEntryInFaqUpdateInput;
+              FaqEntryInFaqWhere: FaqEntryInFaqWhere;
+              FAQEntryOnCreateInput: FaqEntryOnCreateInput;
+              FAQEntryOptions: FaqEntryOptions;
+              FAQEntryRelationInput: FaqEntryRelationInput;
+              FAQEntrySort: FaqEntrySort;
+              FAQEntryUniqueWhere: FaqEntryUniqueWhere;
+              FAQEntryUpdateInput: FaqEntryUpdateInput;
+              FAQEntryWhere: FaqEntryWhere;
+              FAQOnCreateInput: FaqOnCreateInput;
+              FAQOptions: FaqOptions;
+              FAQRelationInput: FaqRelationInput;
+              FAQSort: FaqSort;
+              FAQUniqueWhere: FaqUniqueWhere;
+              FAQUpdateInput: FaqUpdateInput;
+              FAQWhere: FaqWhere;
+            };
+
+            export type QueryResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"Query\\"] = ResolversParentTypes[\\"Query\\"]
+            > = {
+              faqs?: Resolver<
+                Array<ResolversTypes[\\"FAQ\\"]>,
+                ParentType,
+                ContextType,
+                Partial<QueryFaqsArgs>
+              >;
+              faqsConnection?: Resolver<
+                ResolversTypes[\\"FaqsConnection\\"],
+                ParentType,
+                ContextType,
+                Partial<QueryFaqsConnectionArgs>
+              >;
+              faqsAggregate?: Resolver<
+                ResolversTypes[\\"FAQAggregateSelection\\"],
+                ParentType,
+                ContextType,
+                Partial<QueryFaqsAggregateArgs>
+              >;
+              faqEntries?: Resolver<
+                Array<ResolversTypes[\\"FAQEntry\\"]>,
+                ParentType,
+                ContextType,
+                Partial<QueryFaqEntriesArgs>
+              >;
+              faqEntriesConnection?: Resolver<
+                ResolversTypes[\\"FaqEntriesConnection\\"],
+                ParentType,
+                ContextType,
+                Partial<QueryFaqEntriesConnectionArgs>
+              >;
+              faqEntriesAggregate?: Resolver<
+                ResolversTypes[\\"FAQEntryAggregateSelection\\"],
+                ParentType,
+                ContextType,
+                Partial<QueryFaqEntriesAggregateArgs>
+              >;
+            };
+
+            export type MutationResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"Mutation\\"] = ResolversParentTypes[\\"Mutation\\"]
+            > = {
+              createFaqs?: Resolver<
+                ResolversTypes[\\"CreateFaqsMutationResponse\\"],
+                ParentType,
+                ContextType,
+                RequireFields<MutationCreateFaqsArgs, \\"input\\">
+              >;
+              deleteFaqs?: Resolver<
+                ResolversTypes[\\"DeleteInfo\\"],
+                ParentType,
+                ContextType,
+                Partial<MutationDeleteFaqsArgs>
+              >;
+              updateFaqs?: Resolver<
+                ResolversTypes[\\"UpdateFaqsMutationResponse\\"],
+                ParentType,
+                ContextType,
+                Partial<MutationUpdateFaqsArgs>
+              >;
+              createFaqEntries?: Resolver<
+                ResolversTypes[\\"CreateFaqEntriesMutationResponse\\"],
+                ParentType,
+                ContextType,
+                RequireFields<MutationCreateFaqEntriesArgs, \\"input\\">
+              >;
+              deleteFaqEntries?: Resolver<
+                ResolversTypes[\\"DeleteInfo\\"],
+                ParentType,
+                ContextType,
+                Partial<MutationDeleteFaqEntriesArgs>
+              >;
+              updateFaqEntries?: Resolver<
+                ResolversTypes[\\"UpdateFaqEntriesMutationResponse\\"],
+                ParentType,
+                ContextType,
+                Partial<MutationUpdateFaqEntriesArgs>
+              >;
+            };
+
+            export type CreateFaqEntriesMutationResponseResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"CreateFaqEntriesMutationResponse\\"] = ResolversParentTypes[\\"CreateFaqEntriesMutationResponse\\"]
+            > = {
+              info?: Resolver<ResolversTypes[\\"CreateInfo\\"], ParentType, ContextType>;
+              faqEntries?: Resolver<
+                Array<ResolversTypes[\\"FAQEntry\\"]>,
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type CreateFaqsMutationResponseResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"CreateFaqsMutationResponse\\"] = ResolversParentTypes[\\"CreateFaqsMutationResponse\\"]
+            > = {
+              info?: Resolver<ResolversTypes[\\"CreateInfo\\"], ParentType, ContextType>;
+              faqs?: Resolver<Array<ResolversTypes[\\"FAQ\\"]>, ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type CreateInfoResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"CreateInfo\\"] = ResolversParentTypes[\\"CreateInfo\\"]
+            > = {
+              bookmark?: Resolver<Maybe<ResolversTypes[\\"String\\"]>, ParentType, ContextType>;
+              nodesCreated?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              relationshipsCreated?: Resolver<
+                ResolversTypes[\\"Int\\"],
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type DeleteInfoResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"DeleteInfo\\"] = ResolversParentTypes[\\"DeleteInfo\\"]
+            > = {
+              bookmark?: Resolver<Maybe<ResolversTypes[\\"String\\"]>, ParentType, ContextType>;
+              nodesDeleted?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              relationshipsDeleted?: Resolver<
+                ResolversTypes[\\"Int\\"],
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type FaqResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"FAQ\\"] = ResolversParentTypes[\\"FAQ\\"]
+            > = {
+              id?: Resolver<ResolversTypes[\\"ID\\"], ParentType, ContextType>;
+              activated?: Resolver<ResolversTypes[\\"Boolean\\"], ParentType, ContextType>;
+              name?: Resolver<ResolversTypes[\\"String\\"], ParentType, ContextType>;
+              entriesAggregate?: Resolver<
+                Maybe<ResolversTypes[\\"FAQFAQEntryEntriesAggregationSelection\\"]>,
+                ParentType,
+                ContextType,
+                RequireFields<FaqEntriesAggregateArgs, \\"directed\\">
+              >;
+              entries?: Resolver<
+                Array<ResolversTypes[\\"FAQEntry\\"]>,
+                ParentType,
+                ContextType,
+                RequireFields<FaqEntriesArgs, \\"directed\\">
+              >;
+              entriesConnection?: Resolver<
+                ResolversTypes[\\"FAQEntriesConnection\\"],
+                ParentType,
+                ContextType,
+                RequireFields<FaqEntriesConnectionArgs, \\"directed\\">
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type FaqAggregateSelectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"FAQAggregateSelection\\"] = ResolversParentTypes[\\"FAQAggregateSelection\\"]
+            > = {
+              count?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              id?: Resolver<
+                ResolversTypes[\\"IDAggregateSelection\\"],
+                ParentType,
+                ContextType
+              >;
+              name?: Resolver<
+                ResolversTypes[\\"StringAggregateSelection\\"],
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type FaqEdgeResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"FAQEdge\\"] = ResolversParentTypes[\\"FAQEdge\\"]
+            > = {
+              cursor?: Resolver<ResolversTypes[\\"String\\"], ParentType, ContextType>;
+              node?: Resolver<ResolversTypes[\\"FAQ\\"], ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type FaqEntriesConnectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"FaqEntriesConnection\\"] = ResolversParentTypes[\\"FaqEntriesConnection\\"]
+            > = {
+              totalCount?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              pageInfo?: Resolver<ResolversTypes[\\"PageInfo\\"], ParentType, ContextType>;
+              edges?: Resolver<
+                Array<ResolversTypes[\\"FAQEntryEdge\\"]>,
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type FaqEntriesConnectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"FAQEntriesConnection\\"] = ResolversParentTypes[\\"FAQEntriesConnection\\"]
+            > = {
+              edges?: Resolver<
+                Array<ResolversTypes[\\"FAQEntriesRelationship\\"]>,
+                ParentType,
+                ContextType
+              >;
+              totalCount?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              pageInfo?: Resolver<ResolversTypes[\\"PageInfo\\"], ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type FaqEntriesRelationshipResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"FAQEntriesRelationship\\"] = ResolversParentTypes[\\"FAQEntriesRelationship\\"]
+            > = {
+              cursor?: Resolver<ResolversTypes[\\"String\\"], ParentType, ContextType>;
+              node?: Resolver<ResolversTypes[\\"FAQEntry\\"], ParentType, ContextType>;
+              properties?: Resolver<
+                ResolversTypes[\\"FaqEntryInFaq\\"],
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type FaqEntryResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"FAQEntry\\"] = ResolversParentTypes[\\"FAQEntry\\"]
+            > = {
+              id?: Resolver<ResolversTypes[\\"ID\\"], ParentType, ContextType>;
+              title?: Resolver<ResolversTypes[\\"String\\"], ParentType, ContextType>;
+              body?: Resolver<ResolversTypes[\\"String\\"], ParentType, ContextType>;
+              inFAQsAggregate?: Resolver<
+                Maybe<ResolversTypes[\\"FAQEntryFAQInFAQsAggregationSelection\\"]>,
+                ParentType,
+                ContextType,
+                RequireFields<FaqEntryInFaQsAggregateArgs, \\"directed\\">
+              >;
+              inFAQs?: Resolver<
+                Array<ResolversTypes[\\"FAQ\\"]>,
+                ParentType,
+                ContextType,
+                RequireFields<FaqEntryInFaQsArgs, \\"directed\\">
+              >;
+              inFAQsConnection?: Resolver<
+                ResolversTypes[\\"FAQEntryInFAQsConnection\\"],
+                ParentType,
+                ContextType,
+                RequireFields<FaqEntryInFaQsConnectionArgs, \\"directed\\">
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type FaqEntryAggregateSelectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"FAQEntryAggregateSelection\\"] = ResolversParentTypes[\\"FAQEntryAggregateSelection\\"]
+            > = {
+              count?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              id?: Resolver<
+                ResolversTypes[\\"IDAggregateSelection\\"],
+                ParentType,
+                ContextType
+              >;
+              title?: Resolver<
+                ResolversTypes[\\"StringAggregateSelection\\"],
+                ParentType,
+                ContextType
+              >;
+              body?: Resolver<
+                ResolversTypes[\\"StringAggregateSelection\\"],
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type FaqEntryEdgeResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"FAQEntryEdge\\"] = ResolversParentTypes[\\"FAQEntryEdge\\"]
+            > = {
+              cursor?: Resolver<ResolversTypes[\\"String\\"], ParentType, ContextType>;
+              node?: Resolver<ResolversTypes[\\"FAQEntry\\"], ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type FaqEntryFaqInFaQsAggregationSelectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"FAQEntryFAQInFAQsAggregationSelection\\"] = ResolversParentTypes[\\"FAQEntryFAQInFAQsAggregationSelection\\"]
+            > = {
+              count?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              node?: Resolver<
+                Maybe<ResolversTypes[\\"FAQEntryFAQInFAQsNodeAggregateSelection\\"]>,
+                ParentType,
+                ContextType
+              >;
+              edge?: Resolver<
+                Maybe<ResolversTypes[\\"FAQEntryFAQInFAQsEdgeAggregateSelection\\"]>,
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type FaqEntryFaqInFaQsEdgeAggregateSelectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"FAQEntryFAQInFAQsEdgeAggregateSelection\\"] = ResolversParentTypes[\\"FAQEntryFAQInFAQsEdgeAggregateSelection\\"]
+            > = {
+              position?: Resolver<
+                ResolversTypes[\\"IntAggregateSelection\\"],
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type FaqEntryFaqInFaQsNodeAggregateSelectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"FAQEntryFAQInFAQsNodeAggregateSelection\\"] = ResolversParentTypes[\\"FAQEntryFAQInFAQsNodeAggregateSelection\\"]
+            > = {
+              id?: Resolver<
+                ResolversTypes[\\"IDAggregateSelection\\"],
+                ParentType,
+                ContextType
+              >;
+              name?: Resolver<
+                ResolversTypes[\\"StringAggregateSelection\\"],
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type FaqEntryInFaqResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"FaqEntryInFaq\\"] = ResolversParentTypes[\\"FaqEntryInFaq\\"]
+            > = {
+              position?: Resolver<Maybe<ResolversTypes[\\"Int\\"]>, ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type FaqEntryInFaQsConnectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"FAQEntryInFAQsConnection\\"] = ResolversParentTypes[\\"FAQEntryInFAQsConnection\\"]
+            > = {
+              edges?: Resolver<
+                Array<ResolversTypes[\\"FAQEntryInFAQsRelationship\\"]>,
+                ParentType,
+                ContextType
+              >;
+              totalCount?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              pageInfo?: Resolver<ResolversTypes[\\"PageInfo\\"], ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type FaqEntryInFaQsRelationshipResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"FAQEntryInFAQsRelationship\\"] = ResolversParentTypes[\\"FAQEntryInFAQsRelationship\\"]
+            > = {
+              cursor?: Resolver<ResolversTypes[\\"String\\"], ParentType, ContextType>;
+              node?: Resolver<ResolversTypes[\\"FAQ\\"], ParentType, ContextType>;
+              properties?: Resolver<
+                ResolversTypes[\\"FaqEntryInFaq\\"],
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type FaqfaqEntryEntriesAggregationSelectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"FAQFAQEntryEntriesAggregationSelection\\"] = ResolversParentTypes[\\"FAQFAQEntryEntriesAggregationSelection\\"]
+            > = {
+              count?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              node?: Resolver<
+                Maybe<ResolversTypes[\\"FAQFAQEntryEntriesNodeAggregateSelection\\"]>,
+                ParentType,
+                ContextType
+              >;
+              edge?: Resolver<
+                Maybe<ResolversTypes[\\"FAQFAQEntryEntriesEdgeAggregateSelection\\"]>,
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type FaqfaqEntryEntriesEdgeAggregateSelectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"FAQFAQEntryEntriesEdgeAggregateSelection\\"] = ResolversParentTypes[\\"FAQFAQEntryEntriesEdgeAggregateSelection\\"]
+            > = {
+              position?: Resolver<
+                ResolversTypes[\\"IntAggregateSelection\\"],
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type FaqfaqEntryEntriesNodeAggregateSelectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"FAQFAQEntryEntriesNodeAggregateSelection\\"] = ResolversParentTypes[\\"FAQFAQEntryEntriesNodeAggregateSelection\\"]
+            > = {
+              id?: Resolver<
+                ResolversTypes[\\"IDAggregateSelection\\"],
+                ParentType,
+                ContextType
+              >;
+              title?: Resolver<
+                ResolversTypes[\\"StringAggregateSelection\\"],
+                ParentType,
+                ContextType
+              >;
+              body?: Resolver<
+                ResolversTypes[\\"StringAggregateSelection\\"],
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type FaqsConnectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"FaqsConnection\\"] = ResolversParentTypes[\\"FaqsConnection\\"]
+            > = {
+              totalCount?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              pageInfo?: Resolver<ResolversTypes[\\"PageInfo\\"], ParentType, ContextType>;
+              edges?: Resolver<Array<ResolversTypes[\\"FAQEdge\\"]>, ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type IdAggregateSelectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"IDAggregateSelection\\"] = ResolversParentTypes[\\"IDAggregateSelection\\"]
+            > = {
+              shortest?: Resolver<Maybe<ResolversTypes[\\"ID\\"]>, ParentType, ContextType>;
+              longest?: Resolver<Maybe<ResolversTypes[\\"ID\\"]>, ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type IntAggregateSelectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"IntAggregateSelection\\"] = ResolversParentTypes[\\"IntAggregateSelection\\"]
+            > = {
+              max?: Resolver<Maybe<ResolversTypes[\\"Int\\"]>, ParentType, ContextType>;
+              min?: Resolver<Maybe<ResolversTypes[\\"Int\\"]>, ParentType, ContextType>;
+              average?: Resolver<Maybe<ResolversTypes[\\"Float\\"]>, ParentType, ContextType>;
+              sum?: Resolver<Maybe<ResolversTypes[\\"Int\\"]>, ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type PageInfoResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"PageInfo\\"] = ResolversParentTypes[\\"PageInfo\\"]
+            > = {
+              hasNextPage?: Resolver<ResolversTypes[\\"Boolean\\"], ParentType, ContextType>;
+              hasPreviousPage?: Resolver<
+                ResolversTypes[\\"Boolean\\"],
+                ParentType,
+                ContextType
+              >;
+              startCursor?: Resolver<
+                Maybe<ResolversTypes[\\"String\\"]>,
+                ParentType,
+                ContextType
+              >;
+              endCursor?: Resolver<
+                Maybe<ResolversTypes[\\"String\\"]>,
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type StringAggregateSelectionResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"StringAggregateSelection\\"] = ResolversParentTypes[\\"StringAggregateSelection\\"]
+            > = {
+              shortest?: Resolver<Maybe<ResolversTypes[\\"String\\"]>, ParentType, ContextType>;
+              longest?: Resolver<Maybe<ResolversTypes[\\"String\\"]>, ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type UpdateFaqEntriesMutationResponseResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"UpdateFaqEntriesMutationResponse\\"] = ResolversParentTypes[\\"UpdateFaqEntriesMutationResponse\\"]
+            > = {
+              info?: Resolver<ResolversTypes[\\"UpdateInfo\\"], ParentType, ContextType>;
+              faqEntries?: Resolver<
+                Array<ResolversTypes[\\"FAQEntry\\"]>,
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type UpdateFaqsMutationResponseResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"UpdateFaqsMutationResponse\\"] = ResolversParentTypes[\\"UpdateFaqsMutationResponse\\"]
+            > = {
+              info?: Resolver<ResolversTypes[\\"UpdateInfo\\"], ParentType, ContextType>;
+              faqs?: Resolver<Array<ResolversTypes[\\"FAQ\\"]>, ParentType, ContextType>;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type UpdateInfoResolvers<
+              ContextType = any,
+              ParentType extends ResolversParentTypes[\\"UpdateInfo\\"] = ResolversParentTypes[\\"UpdateInfo\\"]
+            > = {
+              bookmark?: Resolver<Maybe<ResolversTypes[\\"String\\"]>, ParentType, ContextType>;
+              nodesCreated?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              nodesDeleted?: Resolver<ResolversTypes[\\"Int\\"], ParentType, ContextType>;
+              relationshipsCreated?: Resolver<
+                ResolversTypes[\\"Int\\"],
+                ParentType,
+                ContextType
+              >;
+              relationshipsDeleted?: Resolver<
+                ResolversTypes[\\"Int\\"],
+                ParentType,
+                ContextType
+              >;
+              __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+            };
+
+            export type Resolvers<ContextType = any> = {
+              Query?: QueryResolvers<ContextType>;
+              Mutation?: MutationResolvers<ContextType>;
+              CreateFaqEntriesMutationResponse?: CreateFaqEntriesMutationResponseResolvers<ContextType>;
+              CreateFaqsMutationResponse?: CreateFaqsMutationResponseResolvers<ContextType>;
+              CreateInfo?: CreateInfoResolvers<ContextType>;
+              DeleteInfo?: DeleteInfoResolvers<ContextType>;
+              FAQ?: FaqResolvers<ContextType>;
+              FAQAggregateSelection?: FaqAggregateSelectionResolvers<ContextType>;
+              FAQEdge?: FaqEdgeResolvers<ContextType>;
+              FaqEntriesConnection?: FaqEntriesConnectionResolvers<ContextType>;
+              FAQEntriesConnection?: FaqEntriesConnectionResolvers<ContextType>;
+              FAQEntriesRelationship?: FaqEntriesRelationshipResolvers<ContextType>;
+              FAQEntry?: FaqEntryResolvers<ContextType>;
+              FAQEntryAggregateSelection?: FaqEntryAggregateSelectionResolvers<ContextType>;
+              FAQEntryEdge?: FaqEntryEdgeResolvers<ContextType>;
+              FAQEntryFAQInFAQsAggregationSelection?: FaqEntryFaqInFaQsAggregationSelectionResolvers<ContextType>;
+              FAQEntryFAQInFAQsEdgeAggregateSelection?: FaqEntryFaqInFaQsEdgeAggregateSelectionResolvers<ContextType>;
+              FAQEntryFAQInFAQsNodeAggregateSelection?: FaqEntryFaqInFaQsNodeAggregateSelectionResolvers<ContextType>;
+              FaqEntryInFaq?: FaqEntryInFaqResolvers<ContextType>;
+              FAQEntryInFAQsConnection?: FaqEntryInFaQsConnectionResolvers<ContextType>;
+              FAQEntryInFAQsRelationship?: FaqEntryInFaQsRelationshipResolvers<ContextType>;
+              FAQFAQEntryEntriesAggregationSelection?: FaqfaqEntryEntriesAggregationSelectionResolvers<ContextType>;
+              FAQFAQEntryEntriesEdgeAggregateSelection?: FaqfaqEntryEntriesEdgeAggregateSelectionResolvers<ContextType>;
+              FAQFAQEntryEntriesNodeAggregateSelection?: FaqfaqEntryEntriesNodeAggregateSelectionResolvers<ContextType>;
+              FaqsConnection?: FaqsConnectionResolvers<ContextType>;
+              IDAggregateSelection?: IdAggregateSelectionResolvers<ContextType>;
+              IntAggregateSelection?: IntAggregateSelectionResolvers<ContextType>;
+              PageInfo?: PageInfoResolvers<ContextType>;
+              StringAggregateSelection?: StringAggregateSelectionResolvers<ContextType>;
+              UpdateFaqEntriesMutationResponse?: UpdateFaqEntriesMutationResponseResolvers<ContextType>;
+              UpdateFaqsMutationResponse?: UpdateFaqsMutationResponseResolvers<ContextType>;
+              UpdateInfo?: UpdateInfoResolvers<ContextType>;
+            };
+
             export interface FAQAggregateSelectionInput {
               count?: boolean;
               id?: boolean;
               name?: boolean;
             }
+
+            export type FaqSelectionSet = SelectionSetObject<Faq, FaqResolvers>;
+            export type InferFromFaqSelectionSet<TSelectionSet extends FaqSelectionSet> =
+              InferFromSelectionSetObject<Faq, FaqResolvers, TSelectionSet>;
 
             export declare class FAQModel {
               public find(args?: {
@@ -2826,6 +7679,15 @@ describe("generate", () => {
                 context?: any;
                 rootValue?: any;
               }): Promise<Faq[]>;
+              public findSafe<TSelectionSet extends FaqSelectionSet>(args?: {
+                where?: FaqWhere;
+
+                options?: FaqOptions;
+                selectionSet?: TSelectionSet;
+                args?: any;
+                context?: any;
+                rootValue?: any;
+              }): Promise<Prettify<InferFromFaqSelectionSet<TSelectionSet>>[]>;
               public create(args: {
                 input: FaqCreateInput[];
                 selectionSet?: string | DocumentNode | SelectionSetNode;
@@ -2867,6 +7729,14 @@ describe("generate", () => {
               body?: boolean;
             }
 
+            export type FaqEntrySelectionSet = SelectionSetObject<
+              FaqEntry,
+              FaqEntryResolvers
+            >;
+            export type InferFromFaqEntrySelectionSet<
+              TSelectionSet extends FaqEntrySelectionSet
+            > = InferFromSelectionSetObject<FaqEntry, FaqEntryResolvers, TSelectionSet>;
+
             export declare class FAQEntryModel {
               public find(args?: {
                 where?: FaqEntryWhere;
@@ -2877,6 +7747,15 @@ describe("generate", () => {
                 context?: any;
                 rootValue?: any;
               }): Promise<FaqEntry[]>;
+              public findSafe<TSelectionSet extends FaqEntrySelectionSet>(args?: {
+                where?: FaqEntryWhere;
+
+                options?: FaqEntryOptions;
+                selectionSet?: TSelectionSet;
+                args?: any;
+                context?: any;
+                rootValue?: any;
+              }): Promise<Prettify<InferFromFaqEntrySelectionSet<TSelectionSet>>[]>;
               public create(args: {
                 input: FaqEntryCreateInput[];
                 selectionSet?: string | DocumentNode | SelectionSetNode;
