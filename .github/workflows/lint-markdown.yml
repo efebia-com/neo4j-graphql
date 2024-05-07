@@ -3,7 +3,7 @@ name: "Lint Markdown"
 on:
   pull_request:
     branches:
-      - dev
+      - develop
     paths:
       - "**/*.md"
 

@@ -70,20 +70,3 @@ jobs:
           NEO_USER: neo4j
           NEO_PASSWORD: password
           NEO_URL: bolt://localhost:7687
-      - if: ${{ !inputs.disable-coverage-archival && matrix.packages.package == 'graphql' }}
-        name: Archive coverage report
-        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4
-        with:
-          name: integration-coverage-${{ matrix.packages.package }}-${{ matrix.neo4j-version }}-${{ matrix.graphql-version.coverage_path }}-${{ matrix.packages.coverage_name }}
-          path: packages/${{ matrix.packages.package }}/coverage-${{ matrix.neo4j-version }}-${{ matrix.graphql-version.coverage_path }}/
-
-  merge-integration-tests-results:
-    runs-on: ubuntu-latest
-    needs: integration-tests
-    steps:
-      - if: ${{ !inputs.disable-coverage-archival }}
-        name: Merge Artifacts
-        uses: actions/upload-artifact/merge@65462800fd760344b1a7b4382951275a0abb4808 # v4
-        with:
-          name: integration-coverage
-          pattern: integration-coverage-*

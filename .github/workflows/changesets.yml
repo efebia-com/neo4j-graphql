@@ -3,7 +3,7 @@ name: changesets
 on:
   push:
     branches:
-      - dev
+      - develop
       - '*.*.*'
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
@@ -48,7 +48,7 @@ jobs:
             //registry.npmjs.org/:_authToken=$NPM_TOKEN
           EOF
         env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.EFEBIA_NPM_PUBLISH_PKG }}
 
       - name: Create release PR or release
         id: changesets
@@ -59,26 +59,6 @@ jobs:
           publish: yarn release
           setupGitUser: false
         env:
-          GITHUB_TOKEN: ${{ secrets.NEO4J_TEAM_GRAPHQL_PERSONAL_ACCESS_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.EFEBIA_TEAM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.EFEBIA_NPM_PUBLISH_PKG }}
           YARN_ENABLE_IMMUTABLE_INSTALLS: false
-
-  slack-notify:
-    needs:
-      - release
-
-    if: ${{ needs.release.outputs.published == 'true' }}
-
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        package: ${{ fromJson(needs.release.outputs.published-packages) }}
-
-    steps:
-      - name: Send Slack announcement of release
-        if: matrix.package.name == '@neo4j/graphql'
-        uses: slackapi/slack-github-action@70cd7be8e40a46e8b0eced40b0de447bdb42f68e # v1.26.0
-        with:
-          payload: '{"version":"${{ matrix.package.version }}"}'
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_RELEASE_ANNOUNCEMENT_WEBHOOK_URL }}

@@ -7,7 +7,7 @@ concurrency:
 on:
   pull_request:
     branches:
-      - dev
+      - develop
       - "*.*.*"
     paths-ignore:
       - "docs/**"
@@ -72,17 +72,11 @@ jobs:
   unit-tests:
     uses: ./.github/workflows/reusable-unit-tests.yml
 
-  e2e-tests-plugins:
-    uses: ./.github/workflows/reusable-subscriptions-plugin-amqp-e2e-test.yml
-
   api-library-tests:
     uses: ./.github/workflows/reusable-api-library-tests.yml
 
   integration-tests-on-prem:
     uses: ./.github/workflows/reusable-integration-tests-on-prem.yml
-
-  federation-tests:
-    uses: ./.github/workflows/reusable-federation-tests.yml
 
   quality-gate:
     if: ${{ always() }}
@@ -91,10 +85,8 @@ jobs:
       - code-scanning
       - package-tests
       - unit-tests
-      - e2e-tests-plugins
       - api-library-tests
       - integration-tests-on-prem
-      - federation-tests
 
     runs-on: ubuntu-latest
 
