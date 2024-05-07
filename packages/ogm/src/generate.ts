@@ -20,9 +20,11 @@
 import { codegen } from "@graphql-codegen/core";
 import type { Types } from "@graphql-codegen/plugin-helpers";
 import * as typescriptPlugin from "@graphql-codegen/typescript";
+import * as typescriptResolversPlugin from "@graphql-codegen/typescript-resolvers";
 import * as fs from "fs";
 import * as graphql from "graphql";
 import prettier from "prettier";
+import findSafeGenerated from "./find-safe";
 import type { OGM } from "./index";
 import { upperFirst } from "./utils/upper-first";
 
@@ -36,9 +38,15 @@ export interface IGenerateOptions {
   */
     noWrite?: boolean;
     /**
-      Instance of @neo4j/graphql-ogm
+      Instance of @efebia/neo4j-graphql-ogm
   */
     ogm: OGM;
+    /**
+     * Enhance default configuration with plugins or additional configuration
+     * @param defaultConfig Default configuration
+     * @returns The new configuration
+     */
+    config?: (defaultConfig: Types.GenerateOptions) => Types.GenerateOptions;
 }
 
 /*  This function will generate TypeScript aggregate input types
@@ -131,28 +139,41 @@ function hasConnectOrCreate(node: any, ogm: OGM): boolean {
     return false;
 }
 
-async function generate(options: IGenerateOptions): Promise<undefined | string> {
+async function generate({ config: configFn = (cf) => cf, ...options }: IGenerateOptions): Promise<undefined | string> {
     await options.ogm.init();
 
     const config: Types.GenerateOptions = {
         config: {},
-        plugins: [
-            {
-                typescript: {},
-            },
-        ],
         filename: options.outFile || "some-random-file-name-thats-not-used",
         documents: [],
         schemaAst: options.ogm.schema,
         schema: graphql.parse(graphql.printSchema(options.ogm.schema)),
+        plugins: [
+            {
+                typescript: {
+                    scalars: {
+                        DateTime: "string",
+                    },
+                },
+            },
+            {
+                "typescript-resolvers": {},
+            },
+        ],
         pluginMap: {
             typescript: typescriptPlugin,
+            "typescript-resolvers": typescriptResolversPlugin,
         },
     };
 
-    const output = await codegen(config);
+    const finalConfig = configFn(config);
+    const output = await codegen(finalConfig);
 
-    const content: string[] = [`import type { SelectionSetNode, DocumentNode } from "graphql";`, output];
+    const content: string[] = [
+        `import type { SelectionSetNode, DocumentNode } from "graphql";`,
+        findSafeGenerated,
+        output,
+    ];
 
     const aggregateSelections: any = {};
     const modeMap: Record<string, string> = {};
@@ -176,6 +197,9 @@ async function generate(options: IGenerateOptions): Promise<undefined | string> 
             ${Object.values(aggregationInput[1]).join("\n")}
             ${aggregationInput[0]}
 
+            export type ${normalizedNodeName}SelectionSet = SelectionSetObject<${normalizedNodeName},${normalizedNodeName}Resolvers>;
+            export type InferFrom${normalizedNodeName}SelectionSet<TSelectionSet extends ${normalizedNodeName}SelectionSet>  = InferFromSelectionSetObject<${normalizedNodeName},${normalizedNodeName}Resolvers,TSelectionSet>;
+
             export declare class ${modelName} {
                 public find(args?: {
                     where?: ${normalizedNodeName}Where;
@@ -186,6 +210,15 @@ async function generate(options: IGenerateOptions): Promise<undefined | string> 
                     context?: any;
                     rootValue?: any;
                 }): Promise<${normalizedNodeName}[]>
+                public findSafe<TSelectionSet extends ${normalizedNodeName}SelectionSet>(args?: {
+                    where?: ${normalizedNodeName}Where;
+                    ${hasFulltextArg ? `fulltext?: ${normalizedNodeName}Fulltext;` : ""}
+                    options?: ${normalizedNodeName}Options;
+                    selectionSet?: TSelectionSet;
+                    args?: any;
+                    context?: any;
+                    rootValue?: any;
+                }): Promise<Prettify<InferFrom${normalizedNodeName}SelectionSet<TSelectionSet>>[]>
                 public create(args: {
                     input: ${normalizedNodeName}CreateInput[];
                     selectionSet?: string | DocumentNode | SelectionSetNode;
