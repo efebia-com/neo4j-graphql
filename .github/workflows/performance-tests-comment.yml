@@ -45,4 +45,4 @@ jobs:
           number: ${{ steps.get-pr-number.outputs.pr-number }}
           header: performance
           path: ./performanceReport
-          GITHUB_TOKEN: ${{ secrets.NEO4J_TEAM_GRAPHQL_PERSONAL_ACCESS_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.EFEBIA_TEAM_TOKEN }}
